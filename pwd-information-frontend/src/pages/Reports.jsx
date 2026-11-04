@@ -89,9 +89,9 @@ function SummaryReports() {
     return counts
   },{})).sort((a,b) => b[1] - a[1]),[selected,group])
   const max = Math.max(1,...data.map(([,count]) => count))
-  const chartMax = Math.max(5,Math.ceil(max / 5) * 5)
-  const ticks = Array.from({length:chartMax / 5 + 1},(_,index) => chartMax - index * 5)
-  const gridTicks = Array.from({length:chartMax + 1},(_,index) => index)
+  const tickStep = 25
+  const chartMax = Math.max(tickStep,Math.ceil(max / tickStep) * tickStep)
+  const ticks = Array.from({length:Math.round(chartMax / tickStep) + 1},(_,index) => chartMax - index * tickStep)
 
   return <div className="reports-page">
     <h1>Reports</h1>
@@ -110,7 +110,7 @@ function SummaryReports() {
             <div className="chart-axis" aria-hidden="true">{ticks.map(tick => <span key={tick} style={{top:`${(chartMax - tick) / chartMax * 100}%`}}>{tick}</span>)}</div>
             <div className="chart-content">
               <div className="chart-plot">
-                {gridTicks.map(tick => <div className={`chart-gridline ${tick % 5 === 0 ? 'chart-gridline-major' : 'chart-gridline-minor'}`} key={tick} style={{top:`${(chartMax - tick) / chartMax * 100}%`}}/>)}
+                {ticks.map(tick => <div className="chart-gridline chart-gridline-major" key={tick} style={{top:`${(chartMax - tick) / chartMax * 100}%`}}/>)}
                 <div className="chart-columns" style={{gridTemplateColumns:`repeat(${Math.max(1,data.length)},minmax(0,1fr))`}}>{data.map(([label,count],index) => <div className="chart-column" key={label} style={{'--bar-height':`${count / chartMax * 100}%`,'--bar-color':colors[index % colors.length]}}><strong className="chart-bar-value">{count}</strong><div className="chart-bar" style={{height:'var(--bar-height)'}} title={`${label}: ${count} records`}/></div>)}</div>
               </div>
               <div className="chart-labels" style={{gridTemplateColumns:`repeat(${Math.max(1,data.length)},minmax(0,1fr))`}}>{data.map(([label]) => <div key={label} title={label}>{label}</div>)}</div>

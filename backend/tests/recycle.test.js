@@ -33,6 +33,7 @@ test('recycle and restore preserve records, hide recycled records, and reserve I
       if(name==='mongoose') return {connect:() => Promise.resolve()};
       if(name==='cors') return () => () => {};
       if(name==='dotenv') return {config(){}};
+      if(name==='node:dns') return {setServers(){}};
       if(name==='./models/PwdRecord') return model;
       if(name==='./routes/documentPhotos') return () => {};
       if(name==='./archiveRetention') return {...require('../archiveRetention'), startArchiveCleanup(){}};

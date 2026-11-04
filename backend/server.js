@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dns = require("node:dns");
@@ -44,7 +44,7 @@ const app = express();
 app.use(cors());
 app.use(express.json({limit: '2mb'}));
 app.use(createActivityMiddleware(ActivityLog));
-app.get('/api/activity-logs', createActivityListHandler(ActivityLog));
+app.get('/api/activity-logs', createActivityListHandler(ActivityLog, PwdRecord));
 app.post('/api/activity-events', (req,res) => {
   if (actorFrom(req)?.role !== 'Staff') return res.status(403).json({message:'Staff session required.'});
   if (!['Signed in','Signed out','Viewed ID card'].includes(req.body?.action)) return res.status(400).json({message:'Unknown activity.'});

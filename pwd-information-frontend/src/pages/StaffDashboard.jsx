@@ -4,16 +4,10 @@ import React, {useMemo,useRef} from 'react'
 import {Link} from 'react-router-dom'
 import {Accessibility, ArrowRight, CalendarDays, Download, FileBarChart2, FilePlus2, Mail, Megaphone, Search, UserRound, Users} from 'lucide-react'
 import {useRecords} from '../utils/recordsApi'
+import {countAgeGroups} from '../utils/ageGroups'
 import '../staff-dashboard.css'
 
-const ageGroups = [
-  {label:'0 - 17',match:age => age <= 17},
-  {label:'18 - 20',match:age => age >= 18 && age <= 20},
-  {label:'21 - 40',match:age => age >= 21 && age <= 40},
-  {label:'41 - 60',match:age => age >= 41 && age <= 60},
-  {label:'61 & above',match:age => age >= 61},
-]
-const ageColors = ['#2563eb','#f97316','#16a34a','#9333ea','#e11d48']
+const ageColors = ['#2563eb','#f97316','#16a34a','#9333ea','#e11d48','#64748b']
 const monthKey = date => String(date || '').slice(0,7)
 const asDate = date => new Date(date).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})
 
@@ -46,10 +40,11 @@ export default function StaffDashboard() {
   const addedThisMonth = records.filter(record => monthKey(record.createdAt) === thisMonth).length
   const updatedThisMonth = records.filter(record => monthKey(record.lastEditedAt) === thisMonth).length
   const percent = count => records.length ? `${(count / records.length * 100).toFixed(1)}% of total` : '0% of total'
-  const ageData = useMemo(() => ageGroups.map(group => ({label:group.label,count:records.filter(record => Number.isFinite(Number(record.age)) && group.match(Number(record.age))).length})),[records])
+  const ageData = useMemo(() => countAgeGroups(records),[records])
   const ageMax = Math.max(1,...ageData.map(item => item.count))
-  const ageChartMax = Math.max(5,Math.ceil(ageMax / 5) * 5)
-  const ageTicks = Array.from({length:ageChartMax / 5 + 1},(_,index) => ageChartMax - index * 5)
+  const ageStep = 50
+  const ageChartMax = Math.ceil(ageMax / ageStep) * ageStep
+  const ageTicks = Array.from({length:ageChartMax / ageStep + 1},(_,index) => ageChartMax - index * ageStep)
   const updates = useMemo(() => records.flatMap(record => [
     record.createdAt && {record,kind:'New record added',at:record.createdAt},
     record.lastEditedAt && {record,kind:'Record updated',at:record.lastEditedAt},
@@ -72,7 +67,7 @@ export default function StaffDashboard() {
       <section className="staff-panel staff-announcements"><h2>Announcements</h2><div className="staff-announcement"><CalendarDays size={24}/><div><strong>Monthly Report Reminder</strong><p>Review this month&apos;s PWD records and generate the report when ready.</p><small>{new Date().toLocaleDateString(undefined,{month:'long',year:'numeric'})}</small></div></div><div className="staff-announcement"><Megaphone size={24}/><div><strong>Record Updates</strong><p>{updatedThisMonth} record{updatedThisMonth === 1 ? '' : 's'} updated this month.</p></div></div><Link className="staff-announcement-link" to="/reports">View Reports <ArrowRight size={16}/></Link></section>
       <section className="staff-panel staff-quick"><h2>Quick Actions</h2><Link to="/add"><FilePlus2 size={19}/> Add New PWD Record <ArrowRight size={16}/></Link><Link to="/records"><Search size={19}/> Search / View Records <ArrowRight size={16}/></Link><Link to="/reports"><FileBarChart2 size={19}/> Generate Reports <ArrowRight size={16}/></Link><button type="button" onClick={() => downloadDialog.current.showModal()} disabled={!records.length}><Download size={19}/> Download PWD List <ArrowRight size={16}/></button><Link to="/messages"><Mail size={19}/> Send a Message <ArrowRight size={16}/></Link></section>
       <section className="staff-panel staff-age"><h2>PWDs by Age Group</h2>
-        <div className="staff-age-figure" role="img" aria-label={`Number of PWDs by age group in years: ${ageData.map(item => `${item.label}: ${item.count}`).join(', ')}`}>
+        <div className="staff-age-figure" style={{'--age-groups':ageData.length}} role="img" aria-label={`Number of PWDs by age group in years: ${ageData.map(item => `${item.label}: ${item.count}`).join(', ')}`}>
           <div className="staff-age-y-title">Number of PWDs</div>
           <div className="staff-age-chart">
             <div className="staff-age-axis">{ageTicks.map(tick => <span key={tick} style={{top:`${(ageChartMax - tick) / ageChartMax * 100}%`}}>{tick}</span>)}</div>
@@ -84,6 +79,7 @@ export default function StaffDashboard() {
           </div>
           <div className="staff-age-x-title">Age Group (years)</div>
         </div>
+        <p className="staff-age-total">Total: {records.length.toLocaleString()} PWD records · All staff and admin records, excluding archived records</p>
       </section>
       <section className="staff-panel staff-summary"><h2>Summary (This Month)</h2><div><FilePlus2 size={18}/><span>Records Added</span><strong>{addedThisMonth}</strong></div><div><FilePlus2 size={18}/><span>Records Updated</span><strong>{updatedThisMonth}</strong></div><div><FileBarChart2 size={18}/><span>Reports Generated</span><strong>{reportsThisMonth}</strong></div></section>
     </div>

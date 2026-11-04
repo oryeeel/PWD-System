@@ -7,6 +7,7 @@ const schema = new mongoose.Schema({
   action: {type: String, required: true},
   recordId: {type: String, default: ''},
   detail: {type: String, default: ''},
+  demoBatch: {type: String, select: false},
 }, {timestamps: {createdAt: true, updatedAt: false}});
 schema.index({createdAt: -1, _id: -1});
 module.exports = mongoose.model('ActivityLog', schema);

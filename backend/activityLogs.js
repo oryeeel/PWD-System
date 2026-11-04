@@ -35,12 +35,14 @@ function createActivityMiddleware(model, logger = console) {
   return (req, res, next) => {
     const actor = actorFrom(req);
     if (actor?.role !== 'Staff') return next();
+    // Express rewrites req.path while a mounted router handles the request.
+    const eventRequest = {method:req.method, path:(req.originalUrl || req.path || '').split('?')[0], body:req.body};
     let payload;
     const json = res.json;
     res.json = function(data) {payload=data;return json.call(this,data);};
     res.once('finish', () => {
       if (res.statusCode < 200 || res.statusCode >= 300) return;
-      const event = actionFor(req, payload);
+      const event = actionFor(eventRequest, payload);
       if (!event) return;
       Promise.resolve().then(() => model.create({staffId:actor.id, username:actor.username,staffName:actor.fullname,...event}))
         .catch(() => logger.error('Could not save staff activity log.'));
@@ -49,13 +51,17 @@ function createActivityMiddleware(model, logger = console) {
   };
 }
 
-function createActivityListHandler(model) {
+function createActivityListHandler(model, recordModel) {
   return async (req,res) => {
     if (actorFrom(req)?.role !== 'Admin') return res.status(403).json({message:'Only admins can view activity logs.'});
     try {
       const page = Math.max(1,parseInt(req.query.page,10) || 1);
+      const requestedSize = Number(req.query.pageSize);
+      const pageSize = [20,50,100].includes(requestedSize) ? requestedSize : 20;
       const query = String(req.query.search || '').trim().slice(0,100);
       const filter = {};
+      const username = String(req.query.staff || '').trim().slice(0,100);
+      if (username) filter.username = username;
       if (query) {
         const expression = [...query].map(char => '^$.*+?()[]{}|\\'.includes(char) ? '\\' + char : char).join('');
         filter.$or = ['staffName','username','action','recordId'].map(field => ({[field]:{$regex:expression,$options:'i'}}));
@@ -65,10 +71,16 @@ function createActivityListHandler(model) {
       if ((from && Number.isNaN(from.getTime())) || (to && Number.isNaN(to.getTime())) || (from && to && from > to)) return res.status(400).json({message:'Choose a valid date range.'});
       if (from || to) filter.createdAt = {...(from ? {$gte:from} : {}),...(to ? {$lte:to} : {})};
       const total = await model.countDocuments(filter);
-      const pages = Math.max(1,Math.ceil(total / 20));
+      const pages = Math.max(1,Math.ceil(total / pageSize));
       const current = Math.min(page,pages);
-      const logs = await model.find(filter).sort({createdAt:-1,_id:-1}).skip((current-1)*20).limit(20).lean();
-      res.json({logs,total,page:current,pages});
+      const logs = await model.find(filter).sort({createdAt:-1,_id:-1}).skip((current-1)*pageSize).limit(pageSize).lean();
+      if (recordModel) {
+        const ids = [...new Set(logs.map(log => log.recordId).filter(Boolean))];
+        const records = ids.length ? await recordModel.find({pwdId:{$in:ids}}).select('pwdId firstName middleName lastName').lean() : [];
+        const names = new Map(records.map(record => [record.pwdId,[record.firstName,record.middleName,record.lastName].filter(Boolean).join(' ')]));
+        for (const log of logs) log.recordName = names.get(log.recordId) || '';
+      }
+      res.json({logs,total,page:current,pages,pageSize});
     } catch {res.status(500).json({message:'Could not load activity logs.'});}
   };
 }

@@ -25,8 +25,29 @@
 
 .records-table th.records-actions-heading{text-align:center}
 
+.records-table-balanced{table-layout:fixed;min-width:920px}
+.records-table-balanced .records-col-number{width:4%}
+.records-table-balanced .records-col-id{width:11%}
+.records-table-balanced .records-col-name{width:26%}
+.records-table-balanced .records-col-age{width:6%}
+.records-table-balanced .records-col-gender{width:8%}
+.records-table-balanced .records-col-disability{width:24%}
+.records-table-balanced .records-col-barangay{width:14%}
+.records-table-balanced .records-col-actions{width:7%}
+.records-table-balanced td{white-space:normal;overflow-wrap:anywhere;vertical-align:middle}
+.records-table-balanced td.records-name-cell,.records-table-balanced .record-name-with-photo{min-width:0}
+.records-table-balanced .record-name-with-photo{grid-template-columns:38px minmax(0,1fr)}
+.records-table-balanced .record-specific-disabilities{max-width:none}
+.records-table-staff{min-width:1060px}
+.records-table-staff .records-col-id{width:10%}
+.records-table-staff .records-col-name{width:24%}
+.records-table-staff .records-col-disability{width:22%}
+.records-table-staff .records-col-barangay{width:13%}
+.records-table-staff .records-col-actions{width:13%}
+
 .records-photo-dialog{width:min(560px,90vw);max-height:90dvh;overflow:auto;border:0;border-radius:14px;padding:20px;color:#173126}
 .records-photo-dialog::backdrop{background:#0008}
 .records-photo-dialog header{display:flex;align-items:center;justify-content:space-between;gap:16px}.records-photo-dialog h2{margin:0;font-size:20px}
 .records-photo-preview{display:flex;flex-direction:column;align-items:center;justify-content:center;margin:18px 0;min-height:180px}.records-photo-preview img{max-width:100%;max-height:55dvh;object-fit:contain;border-radius:8px}
 .records-photo-dialog footer{display:flex;flex-direction:column;align-items:center;gap:10px}.records-photo-dialog footer button{gap:8px}.records-photo-dialog small{color:#627569}
+.records-pagination{flex-wrap:wrap}.records-pagination>strong{margin-right:auto;font-weight:500}.records-pagination label,.records-pagination nav,.records-pagination form{display:flex;align-items:center;gap:8px}.records-pagination nav>span{white-space:nowrap;color:#173126}.records-pagination select,.records-pagination input{padding:8px;border:1px solid #cbd9d0;border-radius:7px;background:#fff;color:#173126;font:inherit}.records-pagination input{width:65px}.records-pagination button{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:36px}.records-pagination button:disabled{opacity:.45;cursor:default}

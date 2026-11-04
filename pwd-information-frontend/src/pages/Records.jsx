@@ -1,12 +1,12 @@
 import {barangays} from '../utils/barangays'
 import React, {useEffect, useMemo, useRef, useState} from 'react'
-import {Eye, Pencil, Archive, Printer, Search, RotateCcw, ChevronLeft, ChevronRight, UserRound, X, Upload} from 'lucide-react'
+import {Eye, Pencil, Archive, Printer, Search, RotateCcw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, UserRound, X, Upload} from 'lucide-react'
 import {Link, useSearchParams} from 'react-router-dom'
 import ArchivedRecords from '../components/ArchivedRecords'
 import {getSession} from '../utils/storage'
 import {archiveRecord, updateRecordPhoto, useRecords, notifyRecordsUpdated} from '../utils/recordsApi'
 
-const PAGE_SIZE = 10
+
 const ageOptions = [
   ['0-19','0 - 19'], ['20-25','20 - 25'], ['26-35','26 - 35'],
   ['36-45','36 - 45'], ['46-60','46 - 60'], ['61+','61 and above'],
@@ -32,7 +32,8 @@ export default function Records() {
   const [type,setType] = useState('')
   const [barangay,setBarangay] = useState('')
   const [page,setPage] = useState(1)
-  const [showAll,setShowAll] = useState(false)
+  const [pageSize,setPageSize] = useState(50)
+  const [jumpPage,setJumpPage] = useState('')
   const [photoSaving,setPhotoSaving] = useState('')
   const [photoError,setPhotoError] = useState('')
   const [previewRecord,setPreviewRecord] = useState(null)
@@ -46,11 +47,11 @@ export default function Records() {
       (!type || record.disabilityType === type) && (!barangay || record.barangay === barangay)
   }).sort((a,b) => String(a.pwdId).localeCompare(String(b.pwdId))), [records,query,age,type,barangay])
 
-  useEffect(() => setPage(1), [query,age,type,barangay])
-  const totalPages = Math.max(1,Math.ceil(filtered.length / PAGE_SIZE))
+  useEffect(() => {setPage(1);setJumpPage('')}, [query,age,type,barangay,pageSize])
+  const totalPages = Math.max(1,Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page,totalPages)
-  const start = showAll ? 0 : (currentPage - 1) * PAGE_SIZE
-  const visible = showAll ? filtered : filtered.slice(start,start + PAGE_SIZE)
+  const start = (currentPage - 1) * pageSize
+  const visible = filtered.slice(start,start + pageSize)
   const hasFilters = Boolean(query || age || type || barangay)
 
   function clearFilters() {
@@ -110,14 +111,28 @@ export default function Records() {
         <button type="button" className="records-clear" onClick={clearFilters}><RotateCcw size={15}/> Clear Filters</button>
       </div>
 
-      <div className="records-table-scroll"><table className="records-table"><thead><tr><th scope="col">No.</th><th scope="col" className="records-id-number">ID Number</th><th scope="col" className="records-name-heading"><span>Full Name</span></th><th>Age</th><th>Gender</th><th>Disability Type</th><th>Barangay</th><th className="records-actions-heading">Actions</th></tr></thead><tbody>
+      <div className="records-table-scroll"><table className={`records-table records-table-balanced ${isStaff ? 'records-table-staff' : 'records-table-admin'}`}><colgroup><col className="records-col-number"/><col className="records-col-id"/><col className="records-col-name"/><col className="records-col-age"/><col className="records-col-gender"/><col className="records-col-disability"/><col className="records-col-barangay"/><col className="records-col-actions"/></colgroup><thead><tr><th scope="col">No.</th><th scope="col" className="records-id-number">ID Number</th><th scope="col" className="records-name-heading"><span>Full Name</span></th><th>Age</th><th>Gender</th><th>Disability Type</th><th>Barangay</th><th className="records-actions-heading">{getSession()?.role === 'Admin' ? 'Action' : 'Actions'}</th></tr></thead><tbody>
         {visible.map((record,index) => <tr key={record.pwdId}>
           <td>{start + index + 1}</td><td className="records-id-number">{record.pwdId}</td><td className="records-name-cell"><div className="record-name-with-photo"><span className="record-photo-picker"><button type="button" className="record-list-photo" title="View photo" aria-label={`View photo of ${record.firstName} ${record.lastName}`} onClick={() => {setPreviewRecord(record);setPhotoError('');photoDialog.current.showModal()}}>{record.photo ? <img src={record.photo} alt=""/> : <UserRound size={21} aria-hidden="true"/>}</button></span><span>{record.firstName} {record.middleName} {record.lastName}{photoSaving === record.pwdId && <small className="record-photo-saving">Saving photo...</small>}</span></div></td><td>{record.age}</td><td>{record.gender}</td><td>{record.disabilityType}{record.disabilityType === 'Multiple Disabilities' && <small className="record-specific-disabilities">{(record.disabilities || []).join(', ') || 'Details not recorded'}</small>}</td><td>{record.barangay}</td>
           <td><div className="record-actions"><Link className="view" title="View record" aria-label={`View ${record.pwdId}`} to={`/records/${record.pwdId}`}><Eye size={17}/></Link>{isStaff && <><Link className="edit" title="Edit record" aria-label={`Edit ${record.pwdId}`} to={`/records/${record.pwdId}/edit`}><Pencil size={16}/></Link><Link className="card" title="Print ID" aria-label={`Print ID for ${record.pwdId}`} to={`/records/${record.pwdId}/id`}><Printer size={17}/></Link></>}{isStaff && <button className="archive" title="Archive record" aria-label={`Archive ${record.pwdId}`} onClick={() => archive(record.pwdId)}><Archive size={16}/></button>}</div></td>
         </tr>)}
       </tbody></table>{!visible.length && <div className="empty">No records found.</div>}</div>
 
-      <div className="records-footer"><strong>{!filtered.length ? 'No records' : showAll ? `All ${filtered.length} records` : `Showing Records ${start + 1}-${start + visible.length} out of ${filtered.length} records`} {hasFilters && <span>(filtered)</span>}</strong><div className="records-footer-controls"><button type="button" className="secondary" aria-pressed={showAll} onClick={() => {setShowAll(!showAll);setPage(1)}}>{showAll ? 'Show 10 per page' : 'Show All'}</button>{!showAll && <div className="records-pages"><button aria-label="Previous page" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={18}/></button><span>{currentPage}</span><button aria-label="Next page" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}><ChevronRight size={18}/></button></div>}</div></div>
+      <div className="records-footer records-pagination">
+        <strong aria-live="polite">{filtered.length ? `${(start+1).toLocaleString()}–${(start+visible.length).toLocaleString()} of ${filtered.length.toLocaleString()} records` : '0 records'} {hasFilters && <span>(filtered)</span>}</strong>
+        <label>Rows per page <select aria-label="Rows per page" value={pageSize} onChange={event => {setPageSize(Number(event.target.value));setPage(1)}}>{[20,50,100].map(size => <option key={size} value={size}>{size}</option>)}</select></label>
+        <nav aria-label="PWD record pages">
+          <button type="button" className="secondary" aria-label="First page" title="First page" disabled={currentPage === 1} onClick={() => setPage(1)}><ChevronsLeft size={18}/></button>
+          <button type="button" className="secondary" aria-label="Previous page" title="Previous page" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={18}/></button>
+          <span>Page {currentPage} of {totalPages}</span>
+          <button type="button" className="secondary" aria-label="Next page" title="Next page" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}><ChevronRight size={18}/></button>
+          <button type="button" className="secondary" aria-label="Last page" title="Last page" disabled={currentPage === totalPages} onClick={() => setPage(totalPages)}><ChevronsRight size={18}/></button>
+        </nav>
+        <form onSubmit={event => {event.preventDefault();const target=Number(jumpPage);if (Number.isInteger(target) && target >= 1 && target <= totalPages) {setPage(target);setJumpPage('')}}}>
+          <label>Go to page <input aria-label="Go to page" type="number" min="1" max={totalPages} step="1" required value={jumpPage} onChange={event => setJumpPage(event.target.value)}/></label>
+          <button type="submit" className="secondary" disabled={!jumpPage}>Go</button>
+        </form>
+      </div>
     </section>}
     <dialog ref={photoDialog} className="records-photo-dialog" aria-labelledby="records-photo-title">
       {previewRecord && <>

@@ -49,7 +49,7 @@ async function main() {
     disabilityType, barangay, address: `${barangay}, Villanueva, Misamis Oriental`,
     disabilities: disabilityType === 'Multiple Disabilities'
       ? (index % 2 ? ['Physical Disability','Hearing Disability'] : ['Visual Disability','Learning Disability']) : [],
-    contact: '', status: index % 6 === 0 ? 'Inactive' : 'Active', addedBy: 'Demo Data',
+    contact: '', status: index % 6 === 0 ? 'Inactive' : 'Active', addedBy: index % 2 === 0 ? 'staff1' : 'staff2',
   }));
   await PwdRecord.insertMany(records);
   console.log(`Added ${records.length} fictional PWD records (${records[0].pwdId}–${records.at(-1).pwdId}).`);

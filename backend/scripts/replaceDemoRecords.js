@@ -80,7 +80,7 @@ async function main() {
       disabilities: disabilityTypes[(index * 3) % disabilityTypes.length] === 'Multiple Disabilities'
         ? multipleCombinations[index % multipleCombinations.length] : [],
       contact: '', status: index % 7 === 0 ? 'Inactive' : 'Active',
-      addedBy: 'Demo Data',
+      addedBy: index % 2 === 0 ? 'staff1' : 'staff2',
       createdAt: new Date(now.getTime() - (people.length - index) * 86400000),
       updatedAt: new Date(now.getTime() - (people.length - index) * 86400000),
     };

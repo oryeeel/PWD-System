@@ -20,4 +20,9 @@
 .staff-age-x-title{grid-column:2;text-align:center;font-size:12px;font-weight:600;color:#354c3e}
 .staff-download-dialog{width:min(420px,calc(100% - 32px));border:1px solid #dce8df;border-radius:16px;padding:24px;box-shadow:0 20px 70px #10251c33;color:#253b2e}.staff-download-dialog::backdrop{background:#10251c80}.staff-download-dialog h2{font-size:19px;margin:0 0 12px}.staff-download-dialog p{font-size:14px;margin:0 0 24px;line-height:1.5}.staff-download-dialog>div{display:flex;justify-content:flex-end;gap:10px}.staff-download-dialog button{min-width:75px}
 
-.staff-age-figure .staff-age-lines i{border-top:1px solid #c9d5ce}
+.staff-age-figure .staff-age-lines i{border-top:1px solid #e0e8e3}
+.staff-age-figure .staff-age-lines i::before{content:'';position:absolute;left:-6px;top:-1px;width:6px;border-top:1px solid #7d9485}
+.staff-age-figure .staff-age-bars,.staff-age-figure .staff-age-labels{grid-template-columns:repeat(var(--age-groups,5),minmax(0,1fr))}
+.staff-age-figure .staff-age-bar{min-height:24px}
+.staff-age-figure .staff-age-column strong{bottom:auto;top:clamp(3px,calc(100% - var(--age-height) + 6px),calc(100% - 21px));z-index:2;color:#fff;background:#173126;border-radius:4px;padding:1px 4px;line-height:16px;pointer-events:none}
+.staff-age-total{margin:14px 0 0;font-size:11px;color:#607568}

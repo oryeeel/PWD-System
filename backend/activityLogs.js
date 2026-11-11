@@ -1,6 +1,7 @@
 // Matches the application's existing browser session model. Actor identity is
 // client-reported; this is an operational history, not a tamper-proof audit trail.
 function actorFrom(req) {
+  if (req.authUser) return req.authUser;
   try {
     const raw = req.headers?.['x-pwd-actor'];
     if (typeof raw !== 'string' || raw.length > 2000) return null;
@@ -44,8 +45,9 @@ function createActivityMiddleware(model, logger = console) {
       if (res.statusCode < 200 || res.statusCode >= 300) return;
       const event = actionFor(eventRequest, payload);
       if (!event) return;
-      Promise.resolve().then(() => model.create({staffId:actor.id, username:actor.username,staffName:actor.fullname,...event}))
+      const write = Promise.resolve().then(() => model.create({staffId:actor.id, username:actor.username,staffName:actor.fullname,...event}))
         .catch(() => logger.error('Could not save staff activity log.'));
+      req.activityWrites?.push(write);
     });
     next();
   };
@@ -62,6 +64,8 @@ function createActivityListHandler(model, recordModel) {
       const filter = {};
       const username = String(req.query.staff || '').trim().slice(0,100);
       if (username) filter.username = username;
+      const activity = String(req.query.activity || '').trim().slice(0,100);
+      if (activity) filter.action = activity;
       if (query) {
         const expression = [...query].map(char => '^$.*+?()[]{}|\\'.includes(char) ? '\\' + char : char).join('');
         filter.$or = ['staffName','username','action','recordId'].map(field => ({[field]:{$regex:expression,$options:'i'}}));

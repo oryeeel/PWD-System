@@ -41,7 +41,7 @@ test('recycle and restore preserve records, hide recycled records, and reserve I
       if(name==='./models/ActivityLog') return {};
       if(name==='./activityLogs') return {actorFrom:()=>null,createActivityMiddleware:()=>()=>{},createActivityListHandler:()=>()=>{}};
       throw new Error(name);
-    },process:{env:{}},console:{log(){},error(){}},Date,
+    },process:{env:{}},console:{log(){},error(){}},Date,module:{exports:{}},
   });
   async function call(method,url,body={}) {
     const route=routes.find(route => route.method===method && route.url===url);

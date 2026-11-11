@@ -170,3 +170,20 @@
   .app-shell .sidebar nav a:hover{background:#d5f3e0;color:#116b3a}
   .app-shell .sidebar nav a.active{background:#118647;color:#fff;box-shadow:inset 4px 0 #7bea9e}
 }
+.app-shell button.clear-filters-button[data-active="false"],
+.app-shell button.clear-filters-button[data-active="false"]:hover {
+  background: #f6f7f6;
+  color: #78847c;
+  border-color: #d1d6d2;
+  box-shadow: none;
+}
+.app-shell button.clear-filters-button[data-active="true"] {
+  background: #118647;
+  color: #fff;
+  border-color: #118647;
+}
+.app-shell button.clear-filters-button[data-active="true"]:hover {
+  background: #0d703b;
+  color: #fff;
+}
+.app-shell button.clear-filters-button:disabled { cursor: default; }

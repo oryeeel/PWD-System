@@ -1,7 +1,10 @@
-import React, {useMemo} from 'react'
+import React, {useEffect,useMemo,useState} from 'react'
 import {Users, UserRound, Check, ArrowRight} from 'lucide-react'
 import {Link} from 'react-router-dom'
 import {useRecords} from '../utils/recordsApi'
+import {apiFetch} from '../utils/apiFetch'
+import {getSession} from '../utils/storage'
+
 
 const colors = ['#2563eb','#f97316','#16a34a','#9333ea','#06b6d4','#e11d48','#eab308','#475569']
 
@@ -51,6 +54,35 @@ function Stat({icon,label,value,detail,color,points}) {
 
 export default function Dashboard() {
   const {records,error} = useRecords()
+  const [staffActivity,setStaffActivity] = useState([])
+  const [activityError,setActivityError] = useState('')
+  const isAdmin = getSession()?.role === 'Admin'
+  useEffect(() => {
+    if (!isAdmin) return
+    const controller = new AbortController()
+    let pending = false
+    async function refreshActivity() {
+      if (pending || document.hidden) return
+      pending = true
+      try {
+        const [activity,archived] = await Promise.all([
+          apiFetch('http://localhost:8081/api/activity-logs?pageSize=100',{signal:controller.signal}),
+          apiFetch('http://localhost:8081/api/recycle-bin',{signal:controller.signal}),
+        ])
+        if (!activity.ok || !archived.ok) throw new Error('Could not load staff activity.')
+        const [result,archiveRecords] = await Promise.all([activity.json(),archived.json()])
+        if (!controller.signal.aborted) {
+          setStaffActivity({logs:result.logs,archived:archiveRecords})
+          setActivityError('')
+        }
+      } catch (err) {
+        if (!controller.signal.aborted) setActivityError('Could not load staff activity. Showing recent record updates.')
+      } finally {pending = false}
+    }
+    refreshActivity()
+    const timer = window.setInterval(refreshActivity,5000)
+    return () => {controller.abort();window.clearInterval(timer)}
+  },[isAdmin])
   const male = records.filter(r => r.gender === 'Male').length
   const female = records.filter(r => r.gender === 'Female').length
   const active = records.filter(r => r.status === 'Active').length
@@ -60,7 +92,20 @@ export default function Dashboard() {
     counts[type] = (counts[type] || 0) + 1
     return counts
   }, {})).sort((a,b) => b[1] - a[1]), [records])
-  const recent = useMemo(() => recentRecords(records), [records])
+  const recent = useMemo(() => {
+    const fallback = recentRecords(records).map(item => ({...item,key:`record-${item.record.pwdId}`}))
+    if (!isAdmin || !staffActivity.logs) return fallback
+    const lookup = new Map([...staffActivity.archived,...records].map(record => [record.pwdId,record]))
+    const logged = staffActivity.logs.filter(log => log.recordId).map(log => ({
+      key:log._id,
+      record:lookup.get(log.recordId) || {pwdId:log.recordId,firstName:log.recordName || 'Record unavailable'},
+      event:{label:log.action,at:log.createdAt},
+    }))
+    // Prefer logged staff actions over the same record's timestamp summary.
+    const loggedIds = new Set(logged.map(item => item.record.pwdId))
+    return [...logged,...fallback.filter(item => !loggedIds.has(item.record.pwdId))]
+      .sort((a,b) => new Date(b.event.at) - new Date(a.event.at)).slice(0,8)
+  },[records,staffActivity,isAdmin])
   const lines = useMemo(() => ({
     all: weeklyPoints(records, () => true),
     male: weeklyPoints(records, r => r.gender === 'Male'),
@@ -94,8 +139,9 @@ export default function Dashboard() {
 
       <section className="panel dashboard-records-panel">
         <div className="panel-head"><h3>Recent Activity</h3><Link to="/records">View all records <ArrowRight size={14}/></Link></div>
+        {activityError && <p role="status">{activityError}</p>}
         <div className="recent-table-scroll"><table className="recent-table"><thead><tr><th>ID</th><th>Full Name</th><th>Age</th><th>Gender</th><th>Disability Type</th><th>Barangay</th><th>Activity</th></tr></thead><tbody>
-          {recent.map(({record,event}) => <tr key={record.pwdId}><td><Link to={`/records/${record.pwdId}`}>{record.pwdId}</Link></td><td>{record.firstName} {record.lastName}</td><td>{record.age}</td><td>{record.gender}</td><td>{record.disabilityType}</td><td>{record.barangay}</td><td><span className="recent-activity">{event.label}</span></td></tr>)}
+          {recent.map(({record,event,key}) => <tr key={key}><td><Link to={record.deletedAt ? '/records?view=archived' : `/records/${record.pwdId}`}>{record.pwdId}</Link></td><td>{record.firstName} {record.lastName}</td><td>{record.age}</td><td>{record.gender}</td><td>{record.disabilityType}</td><td>{record.barangay}</td><td><span className="recent-activity">{event.label}</span></td></tr>)}
         </tbody></table>{!recent.length && <div className="empty">No recent activity.</div>}</div>
       </section>
     </div>

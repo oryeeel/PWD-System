@@ -1,4 +1,4 @@
-import {recordStaffEvent} from '../utils/apiFetch'
+import {apiFetch,recordStaffEvent,serverAuthEnabled} from '../utils/apiFetch'
 import React, {useState} from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, EarOff, Brain, HeartHandshake, Speech, BrainCircuit } from 'lucide-react'
@@ -26,13 +26,27 @@ const loginDisabilityTypes = disabilityTypes.filter(type => type !== 'Multiple D
 export default function Login(){
   const nav = useNavigate()
   const [role,setRole]=useState('Admin')
-  const [username,setUsername]=useState('admin')
-  const [password,setPassword]=useState('admin123')
+  const [username,setUsername]=useState(serverAuthEnabled ? '' : 'admin')
+  const [password,setPassword]=useState(serverAuthEnabled ? '' : 'admin123')
+  const [busy,setBusy]=useState(false)
   const [showPassword,setShowPassword]=useState(false)
   const [error,setError]=useState('')
 
-  function submit(e){
+  async function submit(e){
     e.preventDefault()
+    if (busy) return
+    if (serverAuthEnabled) {
+      setBusy(true);setError('')
+      try {
+        const response = await apiFetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,role})})
+        const user = await response.json()
+        if (!response.ok) throw new Error(user.message || 'Could not sign in.')
+        setSession(user)
+        await recordStaffEvent('Signed in')
+        nav('/')
+      } catch(err) {setError(err.message)} finally {setBusy(false)}
+      return
+    }
     const user = loadUsers().find(u => u.username===username && u.password===password && u.role===role && u.status==='Active')
     if(!user){ setError('Invalid username, password, or role.'); return }
     setSession({id:user.id, fullname:user.fullname, username:user.username, role:user.role})
@@ -44,7 +58,7 @@ export default function Login(){
     <div className="login-overlay">
       <section className="welcome-panel">
         <img className="big-seal office-logo" src="/mswd-logo.jpg" alt="MSWD Villanueva logo"/>
-        <h1 className="login-system-title">PWD Registry and<br/>Information System</h1>
+        <h1 className="login-system-title">PWD Registry and<br/>Information Management System</h1>
         <p className="login-office-name">Municipal Social Welfare and Development Office</p>
         <p className="login-office-location">Villanueva, Misamis Oriental</p>
         <section className="login-disabilities" aria-label="Disability types in the registry">
@@ -55,12 +69,13 @@ export default function Login(){
           })}</ul>
         </section>
       </section>
+      <section className="login-form-panel" aria-label="Account sign in">
       <form className="login-card" onSubmit={submit}>
         <h2>Login to your account</h2>
         <p>Select your role</p>
         <div className="role-switch">
-          <button type="button" className={role==='Admin'?'active':''} onClick={()=>{setRole('Admin');setUsername('admin');setPassword('admin123')}}>Admin</button>
-          <button type="button" className={role==='Staff'?'active':''} onClick={()=>{setRole('Staff');setUsername('staff1');setPassword('staff123')}}>Staff</button>
+          <button type="button" disabled={busy} className={role==='Admin'?'active':''} onClick={()=>{setRole('Admin');setUsername(serverAuthEnabled ? '' : 'admin');setPassword(serverAuthEnabled ? '' : 'admin123')}}>Admin</button>
+          <button type="button" disabled={busy} className={role==='Staff'?'active':''} onClick={()=>{setRole('Staff');setUsername(serverAuthEnabled ? '' : 'staff1');setPassword(serverAuthEnabled ? '' : 'staff123')}}>Staff</button>
         </div>
         <label>Username<input value={username} onChange={e=>setUsername(e.target.value)} required/></label>
         <label htmlFor="login-password">Password</label>
@@ -69,9 +84,10 @@ export default function Login(){
           <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} title={showPassword ? 'Hide password' : 'Show password'} onClick={()=>setShowPassword(value=>!value)}>{showPassword ? <Eye size={18}/> : <EyeOff size={18}/>}</button>
         </div>
         {error && <div className="error">{error}</div>}
-        <button className="primary full">LOGIN</button>
+        <button className="primary full" disabled={busy}>{busy ? 'Signing in...' : 'LOGIN'}</button>
       </form>
+      </section>
     </div>
   </div>
 }
- 
+

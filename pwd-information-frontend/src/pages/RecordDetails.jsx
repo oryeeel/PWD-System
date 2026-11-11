@@ -21,13 +21,13 @@ function Field({label,value}) {
 }
 
 function PrintSheet({record,fullName}) {
-  return <div className="record-print-preview"><div className="print-sheet-title"><strong>PWD Registry and Information System</strong><small>MSWDO | Villanueva, Misamis Oriental</small><b>PWD RECORD</b></div><Field label="ID" value={record.pwdId}/><Field label="Full Name" value={fullName}/><Field label="Birthdate" value={displayDate(record.birthdate)}/><Field label="Age" value={record.age ?? 'N/A'}/><Field label="Gender" value={record.gender}/><Field label="Address" value={record.address || record.barangay}/><Field label="Disability Type" value={record.disabilityType}/>{record.disabilityType === 'Multiple Disabilities' && <Field label="Specific Disabilities" value={(record.disabilities || []).join(', ')}/>}<Field label="Contact Number" value={record.contact}/><Field label="Status" value={record.status}/><Field label="Date Added" value={displayDate(record.createdAt)}/><Field label="Added by" value={record.addedBy && userDisplayName({username:record.addedBy})}/></div>
+  return <div className="record-print-preview"><div className="print-sheet-title"><strong>PWD Registry and Information Management System</strong><small>MSWDO | Villanueva, Misamis Oriental</small><b>PWD RECORD</b></div><Field label="ID" value={record.pwdId}/><Field label="Full Name" value={fullName}/><Field label="Birthdate" value={displayDate(record.birthdate)}/><Field label="Age" value={record.age ?? 'N/A'}/><Field label="Gender" value={record.gender}/><Field label="Address" value={record.address || record.barangay}/><Field label="Disability Type" value={record.disabilityType}/>{record.disabilityType === 'Multiple Disabilities' && <Field label="Specific Disabilities" value={(record.disabilities || []).join(', ')}/>}<Field label="Contact Number" value={record.contact}/><Field label="Status" value={record.status}/><Field label="Date Added" value={displayDate(record.createdAt)}/><Field label="Added by" value={record.addedBy && userDisplayName({username:record.addedBy})}/></div>
 }
 
 function downloadPdf(record, fullName, paperSize, includePhoto) {
   const pdf = new jsPDF({format:paperSize})
   pdf.setFont('helvetica','bold'); pdf.setFontSize(13)
-  pdf.text('PWD Registry and Information System',20,22)
+  pdf.text('PWD Registry and Information Management System',20,22)
   pdf.setFontSize(11); pdf.setFont('helvetica','normal')
   pdf.text('MSWDO | Villanueva, Misamis Oriental',20,29)
   pdf.setDrawColor(7,124,49); pdf.line(20,34,190,34)
@@ -196,7 +196,7 @@ export default function RecordDetails() {
             <label>Last Name<input required value={form.lastName} onChange={event => setForm({...form,lastName:event.target.value})}/></label>
             <label>Birthdate<input type="date" value={form.birthdate} onChange={event => setForm({...form,birthdate:event.target.value})}/></label>
             <label>Age<input type="number" min="0" value={form.age} onChange={event => setForm({...form,age:event.target.value})}/></label>
-            <label>Gender<select value={form.gender} onChange={event => setForm({...form,gender:event.target.value})}><option value="">Select gender</option><option>Male</option><option>Female</option><option>Prefer not to say</option></select></label>
+            <label>Gender<select value={form.gender} onChange={event => setForm({...form,gender:event.target.value})}><option value="">Select gender</option><option>Male</option><option>Female</option></select></label>
             <label>Barangay<select value={form.barangay} onChange={event => setForm({...form,barangay:event.target.value})} required><option value="">Select barangay</option>{form.barangay && !barangays.includes(form.barangay) && <option value={form.barangay} disabled>{form.barangay} (choose a valid barangay)</option>}{barangays.map(value => <option key={value}>{value}</option>)}</select></label>
             <label>Disability Type<select value={form.disabilityType} onChange={event => setForm({...form,disabilityType:event.target.value,disabilities:event.target.value === 'Multiple Disabilities' ? form.disabilities : []})}><option value="">Select disability type</option>{disabilityTypes.map(type => <option key={type}>{type}</option>)}</select></label>
             {form.disabilityType === 'Multiple Disabilities' && <fieldset className="record-modal-disabilities"><legend>Specific Disabilities (select at least two)</legend>{specificDisabilities.map(type => <label key={type}><input type="checkbox" checked={form.disabilities.includes(type)} onChange={() => setForm(previous => ({...previous,disabilities:previous.disabilities.includes(type) ? previous.disabilities.filter(item => item !== type) : [...previous.disabilities,type]}))}/>{type}</label>)}</fieldset>}

@@ -1,5 +1,6 @@
 import ActivityLogs from './pages/ActivityLogs'
-import React from 'react'
+import React, {useEffect,useState} from 'react'
+import {apiFetch,serverAuthEnabled} from './utils/apiFetch'
 import { Routes,Route,Navigate,useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -13,7 +14,7 @@ import IdCard from './pages/IdCard'
 import Reports from './pages/Reports'
 import Users from './pages/Users'
 import Messages from './pages/Messages'
-import { getSession } from './utils/storage'
+import { getSession,setSession,clearSession } from './utils/storage'
 
 function Protected({children,role}){
  const location=useLocation()
@@ -29,6 +30,21 @@ function RoleDashboard(){
  return <Navigate to="/login" replace/>
 }
 export default function App(){
+ const [checking,setChecking] = useState(serverAuthEnabled)
+ const [sessionError,setSessionError] = useState('')
+ useEffect(() => {
+   if (!serverAuthEnabled) return
+   const controller = new AbortController()
+   apiFetch('/api/auth/me',{signal:controller.signal}).then(async response => {
+     if (response.status === 401) {clearSession();return}
+     if (!response.ok) throw new Error('Could not verify your session. Reload to retry.')
+     setSession(await response.json())
+   }).catch(err => {if (!controller.signal.aborted) setSessionError('Could not connect to the server. Reload to retry.')})
+     .finally(() => {if (!controller.signal.aborted) setChecking(false)})
+   return () => controller.abort()
+ },[])
+ if (checking) return <p role="status">Checking session...</p>
+ if (sessionError) return <p role="alert">{sessionError}</p>
  return <Routes>
    <Route path="/login" element={<Login/>}/>
    <Route path="/" element={<Protected><RoleDashboard/></Protected>}/>

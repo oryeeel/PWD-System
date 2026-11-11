@@ -1,4 +1,4 @@
-﻿const express = require("express");
+const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dns = require("node:dns");
@@ -41,8 +41,11 @@ function missingIdCardDetails(body) {
 
 const app = express();
 
-app.use(cors());
+app.use(cors(process.env.NODE_ENV === 'production' || process.env.SERVER_AUTH === 'true'
+  ? {origin:process.env.APP_ORIGIN,credentials:true} : {}));
 app.use(express.json({limit: '2mb'}));
+const serverAuth = process.env.NODE_ENV === 'production' || process.env.SERVER_AUTH === 'true';
+if (serverAuth) require('./auth').installAuth(app);
 app.use(createActivityMiddleware(ActivityLog));
 app.get('/api/activity-logs', createActivityListHandler(ActivityLog, PwdRecord));
 app.post('/api/activity-events', (req,res) => {
@@ -50,24 +53,27 @@ app.post('/api/activity-events', (req,res) => {
   if (!['Signed in','Signed out','Viewed ID card'].includes(req.body?.action)) return res.status(400).json({message:'Unknown activity.'});
   res.json({ok:true});
 });
-app.post('/api/messages/send', createSmsHandler({model: PwdRecord}));
+app.post('/api/messages/send', createSmsHandler({model: PwdRecord,
+  ...(process.env.VERCEL ? {acquireSendSlot:require('./smsCooldown').acquireSendSlot} : {})}));
 app.use('/api/records/:pwdId/document-photos',require('./routes/documentPhotos'));
 
 
 // ============================================
 // CONNECT TO MONGODB
 // ============================================
-mongoose
+const databaseReady = mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => {
-    startArchiveCleanup(PwdRecord);
+  .then(async () => {
+    if (serverAuth) await require('./auth').bootstrapAdmin();
+    if (!process.env.VERCEL) startArchiveCleanup(PwdRecord);
     console.log("✅ MongoDB connected successfully!");
   })
   .catch((error) => {
     console.error(
       "❌ MongoDB connection error:",
-      error
+      'Database initialization failed.'
     );
+    if (process.env.VERCEL) throw new Error('Database initialization failed.');
   });
 
 
@@ -75,8 +81,9 @@ mongoose
 // TEST BACKEND
 // ============================================
 app.get("/", (req, res) => {
+  if (serverAuth) return res.sendFile(require('node:path').resolve(__dirname,'../pwd-information-frontend/dist/index.html'));
   res.send(
-    "PWD Registry and Information System Backend is running!"
+    "PWD Registry and Information Management System Backend is running!"
   );
 });
 
@@ -351,7 +358,7 @@ app.put(
 // ============================================
 const PORT = process.env.PORT || 8081;
 
-app.listen(PORT, () => {
+if (!process.env.VERCEL) app.listen(PORT, () => {
   console.log(
     `🚀 Server running on http://localhost:${PORT}`
   );
@@ -387,3 +394,19 @@ app.post('/api/recycle-bin/:pwdId/restore', async (req, res) => {
     res.json({message: 'Record restored', pwdId: record.pwdId});
   } catch (error) { res.status(500).json({message: 'Failed to restore record'}); }
 });
+
+if (serverAuth && !process.env.VERCEL) {
+  const frontend = require('node:path').resolve(__dirname,'../pwd-information-frontend/dist');
+  app.use(express.static(frontend));
+  app.get('/{*path}',(req,res) => {
+    if (req.path.startsWith('/api/')) return res.status(404).json({message:'API route not found.'});
+    res.sendFile(require('node:path').join(frontend,'index.html'));
+  });
+  app.use((err,req,res,next) => {
+    console.error('Request failed.');
+    res.status(500).json({message:'The server could not complete this request.'});
+  });
+}
+
+module.exports = app;
+module.exports.databaseReady = databaseReady;

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci --prefix backend && npm ci --prefix pwd-information-frontend --include=dev",
+  "buildCommand": "VITE_SERVER_AUTH=true npm run build --prefix pwd-information-frontend",
+  "outputDirectory": "pwd-information-frontend/dist",
+  "env": {
+    "NODE_ENV": "production",
+    "VITE_SERVER_AUTH": "true"
+  },
+  "functions": {
+    "api/index.js": {"maxDuration": 60}
+  },
+  "rewrites": [
+    {"source": "/api/:path*", "destination": "/api/index"},
+    {"source": "/((?!api/).*)", "destination": "/index.html"}
+  ]
+}

@@ -29,6 +29,20 @@ test('normalizes Philippine phone formats and rejects invalid numbers',()=>{
   for (const phone of ['09171234567','9171234567','+63 917 123 4567']) assert.equal(normalizePhone(phone),'639171234567');
   assert.equal(normalizePhone('123'),null);
 });
+
+test('shared cooldown refuses a send before contacting IPROG',async()=>{
+  const {handler,calls}=setup({acquireSendSlot:async()=>false});
+  assert.equal((await call(handler)).code,429);
+  assert.equal(calls(),0);
+});
+
+test('authenticated remote staff can send through the provider without local-only restriction',async()=>{
+  const {handler,calls}=setup();
+  const res=response();
+  await handler({body,socket:{remoteAddress:'203.0.113.10'},authUser:{role:'Staff'}},res);
+  assert.equal(res.code,200);
+  assert.equal(calls(),1);
+});
 test('sends SMS to the selected record contact, returns queued rather than delivered, and prevents rapid repeats',async()=>{
   const {handler,calls}=setup();
   const result=await call(handler);

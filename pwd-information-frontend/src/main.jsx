@@ -12,6 +12,8 @@ import './reports.css'
 import './palette.css'
 import './modern-theme.css'
 import './record-workspace.css'
+import './login.css'
+import './sidebar.css'
 
 localStorage.removeItem('pwd_theme_v1')
 document.documentElement.removeAttribute('data-theme')

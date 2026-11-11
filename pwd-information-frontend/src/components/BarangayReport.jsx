@@ -58,7 +58,7 @@ export default function BarangayReport() {
       </div>
     </dialog>
     {notice && <p role="status">{notice}</p>}
-    <div className="barangay-report-heading"><strong>PWD Registry and Information System</strong><span>MSWDO | Villanueva, Misamis Oriental</span><span>{filterLabel}</span></div>
+    <div className="barangay-report-heading"><strong>PWD Registry and Information Management System</strong><span>MSWDO | Villanueva, Misamis Oriental</span><span>{filterLabel}</span></div>
     {groups.map(group => <section key={group.name} className="barangay-report-section"><h3>{group.name==='Unassigned' ? 'Unassigned — barangay needs updating' : `Barangay ${group.name}`} <small>({group.records.length} records)</small></h3><div className="barangay-report-scroll"><table><thead><tr>{columns.map(column => <th key={column} scope="col">{column}</th>)}</tr></thead><tbody>{group.records.map((record,index) => <tr key={record.pwdId}>{recordCells(record,index).map((cell,i) => <td key={i}>{cell || '—'}</td>)}</tr>)}{!group.records.length && <tr><td colSpan={columns.length}>No records match the selected filters.</td></tr>}</tbody></table></div></section>)}
   </section></div>
 }

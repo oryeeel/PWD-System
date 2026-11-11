@@ -6,12 +6,12 @@ function normalizePhone(value) {
 }
 
 // Local, single-recipient demo only: the existing application has no server-side login.
-function createSmsHandler({model, env = process.env, send = fetch, now = Date.now}) {
+function createSmsHandler({model, env = process.env, send = fetch, now = Date.now, acquireSendSlot}) {
   let busy = false;
   let nextSendAt = 0;
   return async (req, res) => {
     const address = req.socket?.remoteAddress;
-    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address)) {
+    if (req.authUser?.role !== 'Staff' && !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address)) {
       return res.status(403).json({message: 'SMS demo is available only on this computer.'});
     }
     if (!env.IPROG_API_TOKEN) {
@@ -29,6 +29,9 @@ function createSmsHandler({model, env = process.env, send = fetch, now = Date.no
       const phoneNumber = normalizePhone(record?.contact);
       if (!phoneNumber) {
         return res.status(400).json({message: 'The selected record needs a valid Philippine mobile contact number. Edit its contact number before sending.'});
+      }
+      if (acquireSendSlot && !await acquireSendSlot(new Date(now()))) {
+        return res.status(429).json({message:'Wait one minute before sending another SMS.'});
       }
       nextSendAt = now() + 60000;
       const response = await send('https://www.iprogsms.com/api/v1/sms_messages', {

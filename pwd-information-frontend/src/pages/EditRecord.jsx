@@ -348,9 +348,6 @@ export default function EditRecord() {
                   Female
                 </option>
 
-                <option value="Prefer not to say">
-                  Prefer not to say
-                </option>
               </select>
             </label>
 <label>

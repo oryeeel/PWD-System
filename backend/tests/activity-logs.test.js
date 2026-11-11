@@ -53,6 +53,16 @@ test('admin can filter activity by exact staff username',async()=>{
   assert.deepEqual(filter,{username:'staff2'});
   assert.equal(res.statusCode,200);
 });
+test('activity filter combines exact action with staff and date filters',async()=>{
+  let filter;
+  const chain={sort(){return this},skip(){return this},limit(){return this},lean:async()=>[]};
+  const model={countDocuments:async value=>{filter=value;return 0},find:value=>{assert.deepEqual(value,filter);return chain}};
+  const res=response();
+  await createActivityListHandler(model)({headers:header({...staff,role:'Admin'}),query:{activity:'Viewed record',staff:'staff2',from:'2026-10-24'}},res);
+  assert.equal(res.statusCode,200);
+  assert.deepEqual(filter,{username:'staff2',action:'Viewed record',createdAt:{$gte:new Date('2026-10-24T00:00:00+08:00')}});
+});
+
 test('maps archive, restore, creation, photos and SMS to clear actions',()=>{
   for(const [method,path,action] of [['POST','/api/records/PWD-0001/recycle','Archived record'],['POST','/api/recycle-bin/PWD-0001/restore','Restored record'],['POST','/api/records','Added record'],['PATCH','/api/records/PWD-0001/document-photos/pwdIdPhoto','Updated document photo'],['POST','/api/messages/send','Submitted SMS']]){
     assert.equal(actionFor({method,path,body:{recipientIds:['PWD-0001']}},{pwdId:'PWD-0001'}).action,action);

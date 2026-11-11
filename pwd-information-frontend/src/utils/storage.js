@@ -15,6 +15,9 @@ export const seedUsers = [
 ]
 
 export function loadUsers() {
+  if (import.meta.env.VITE_SERVER_AUTH === 'true') {
+    try {return JSON.parse(sessionStorage.getItem('pwd_server_users') || '[]')} catch {return []}
+  }
   const raw = localStorage.getItem(USERS_KEY)
   if (!raw) {
     localStorage.setItem(USERS_KEY, JSON.stringify(seedUsers))
@@ -32,6 +35,12 @@ export function loadUsers() {
 export function saveUsers(users) { localStorage.setItem(USERS_KEY, JSON.stringify(users)) }
 
 export function loadMessages() {
+  if (import.meta.env.VITE_SERVER_AUTH === 'true') {
+    try {
+      const saved=JSON.parse(localStorage.getItem(MESSAGES_KEY) || '[]')
+      return Array.isArray(saved) ? saved.filter(item => !item.sample && item.id !== 'althea-sms-demo') : []
+    } catch {return []}
+  }
   let saved = []
   try { saved = JSON.parse(localStorage.getItem(MESSAGES_KEY) || '[]') } catch { saved = [] }
   if (!Array.isArray(saved)) saved = []
@@ -106,5 +115,5 @@ export function setSession(user) { sessionStorage.setItem(SESSION_KEY,JSON.strin
 export function getSession() {
   try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null') } catch { return null }
 }
-export function clearSession() { sessionStorage.removeItem(SESSION_KEY);localStorage.removeItem(SESSION_KEY) }
+export function clearSession() { sessionStorage.removeItem(SESSION_KEY);sessionStorage.removeItem('pwd_server_users');localStorage.removeItem(SESSION_KEY) }
 

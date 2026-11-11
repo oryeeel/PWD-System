@@ -1,0 +1,26 @@
+.app-shell .sidebar {
+  background: linear-gradient(#edf9f199,#edf9f180),url('/villanueva-background.jpg') center/cover no-repeat;
+  border-right-color: #d4eadd;
+}
+
+.app-shell .sidebar nav a {
+  background: #ffffffbd;
+  color: #244b36;
+  font-weight: 600;
+}
+
+.app-shell .sidebar nav a:hover {
+  background: #d5f3e0;
+  color: #116b3a;
+}
+
+.app-shell .sidebar nav a.active {
+  background: #118647;
+  color: #fff;
+  box-shadow: inset 4px 0 #7bea9e;
+}
+
+.app-shell .sidebar nav a:focus-visible {
+  outline: 2px solid #087f46;
+  outline-offset: 2px;
+}

@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx'
 import {barangays} from './barangays'
 
 export const columns = ['No.', 'PWD ID', 'Last Name', 'First Name', 'Middle Name', 'Disability Type', 'Barangay', 'Date Added', 'Status']
-const office = 'PWD Registry and Information System'
+const office = 'PWD Registry and Information Management System'
 export function groupBarangayRecords(records) {
   const groups = barangays.map(name => ({name, records:[]}))
   const unassigned = {name:'Unassigned', records:[]}

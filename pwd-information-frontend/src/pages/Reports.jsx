@@ -26,17 +26,20 @@ function matchesCategory(record, disabilityType, barangay, age, gender) {
 
 export default function Reports() {
   const [mode,setMode] = useState('summary')
-  return <><label className="report-type-selector">Report Type<select value={mode} onChange={event => setMode(event.target.value)}><option value="summary">Disability Type Summary</option><option value="barangays">Complete PWD Records List</option></select></label>{mode === 'barangays' ? <BarangayReport/> : <SummaryReports group="disabilityType"/>}</>
+  const [allDates,setAllDates] = useState(true)
+  const [start,setStart] = useState(() => new Date(Date.now()-60*86400000).toISOString().slice(0,10))
+  const [end,setEnd] = useState(() => new Date().toISOString().slice(0,10))
+  const dateRange={allDates,setAllDates,start,setStart,end,setEnd}
+  const reportTypeControl=<label className="report-type-selector">Report Type<select value={mode} onChange={event => setMode(event.target.value)}><option value="summary">PWD Statistics Summary</option><option value="barangays">Detailed PWD Registry</option></select></label>
+  return mode === 'barangays' ? <BarangayReport reportTypeControl={reportTypeControl} dateRange={dateRange}/> : <SummaryReports group="disabilityType" reportTypeControl={reportTypeControl} dateRange={dateRange}/>
 }
 
-function SummaryReports({group}) {
+function SummaryReports({group,reportTypeControl,dateRange}) {
   const {records,error} = useRecords()
   const today = new Date().toISOString().slice(0,10)
   const defaultStart = new Date(Date.now() - 60 * 86400000).toISOString().slice(0,10)
-  const [allDates,setAllDates] = useState(true)
+  const {allDates,setAllDates,start,setStart,end,setEnd}=dateRange
   const [reportAllDates,setReportAllDates] = useState(true)
-  const [start,setStart] = useState(defaultStart)
-  const [end,setEnd] = useState(today)
   const [disabilityType,setDisabilityType] = useState('')
   const [barangay,setBarangay] = useState('')
   const [age,setAge] = useState('')
@@ -105,7 +108,8 @@ function SummaryReports({group}) {
     <h1>Reports</h1>
     <section className="reports-panel">
       {error && <div className="empty">Could not load records: {error}</div>}
-      <div className="reports-controls">
+      <div className="reports-controls reports-top-controls">
+        {reportTypeControl}
         <div><label style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}><input type="checkbox" checked={allDates} onChange={event => setAllDates(event.target.checked)}/> All dates</label><strong>Date Range</strong><div className="reports-dates"><input disabled={allDates} aria-label="Start date" type="date" value={start} onChange={event => {setStart(event.target.value);setEnd(oneMonthAfter(event.target.value))}}/><span>➜</span><input disabled={allDates} aria-label="End date" type="date" value={end} min={start || undefined} onChange={event => setEnd(event.target.value)}/></div></div>
       </div>
       <div className="reports-category-filters"><label>Age Group<select value={age} onChange={event => setAge(event.target.value)}><option value="">All age groups</option>{ageOptions.map(label => <option key={label} value={label}>{label}</option>)}<option value="Unspecified">Unspecified</option></select></label><label>Barangay<select value={barangay} onChange={event => setBarangay(event.target.value)}><option value="">All barangays</option>{barangays.map(name => <option key={name} value={name}>{name}</option>)}</select></label><label>Disability Type<select value={disabilityType} onChange={event => setDisabilityType(event.target.value)}><option value="">All disability types</option>{disabilityTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></label><label>Gender<select value={gender} onChange={event => setGender(event.target.value)}><option value="">All genders</option><option>Male</option><option>Female</option></select></label><button type="button" className="clear-filters-button" data-active={Boolean(disabilityType || barangay || age || gender)} onClick={() => {setDisabilityType('');setBarangay('');setAge('');setGender('')}} disabled={!disabilityType && !barangay && !age && !gender}>Clear Filters</button></div>

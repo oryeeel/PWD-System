@@ -86,6 +86,21 @@ function installAuth(app,env=process.env,dependencies={}) {
       res.status(201).json(publicUser(user));
     } catch(err) {if (err.code === 11000) return res.status(409).json({message:'Username already exists.'});next(err);}
   });
+  app.patch('/api/users/:id',async(req,res,next) => {
+    try {
+      const {username,fullname,password} = req.body || {};
+      if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({message:'Invalid user ID.'});
+      if (typeof username !== 'string' || !/^[a-zA-Z0-9_.-]{3,50}$/.test(username) || typeof fullname !== 'string' || !fullname.trim() || fullname.length > 150 ||
+          (password !== undefined && password !== '' && (typeof password !== 'string' || password.length < 12 || password.length > 72))) {
+        return res.status(400).json({message:'Use a valid username, full name, and an optional password of 12–72 characters.'});
+      }
+      const changes = {username,fullname:fullname.trim()};
+      if (password) changes.passwordHash = await bcrypt.hash(password,12);
+      const user = await Users.findByIdAndUpdate(req.params.id,{$set:changes},{new:true,runValidators:true});
+      if (!user) return res.status(404).json({message:'User not found.'});
+      res.json(publicUser(user));
+    } catch(err) {if (err.code === 11000) return res.status(409).json({message:'Username already exists.'});next(err);}
+  });
   app.patch('/api/users/:id/status',async(req,res,next) => {
     try {
       if (!['Active','Archived'].includes(req.body.status)) return res.status(400).json({message:'Invalid status.'});

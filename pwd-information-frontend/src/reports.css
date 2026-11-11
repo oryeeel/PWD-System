@@ -52,3 +52,7 @@
 .report-export-dialog h2{margin:0 0 12px;font-size:21px}
 .report-export-dialog p{margin:0 0 24px;line-height:1.5}
 .report-export-dialog>div{display:flex;justify-content:flex-end;gap:10px}
+
+.reports-top-controls.reports-controls,.reports-top-controls{display:grid;grid-template-columns:minmax(230px,380px) minmax(0,1fr);align-items:start;gap:24px;margin-bottom:24px}.reports-top-controls .report-type-selector{width:100%;max-width:none;margin:0;gap:8px}.reports-top-controls .report-type-selector select{width:100%;height:auto;min-height:40px;padding:10px}.reports-top-controls>div:last-child{justify-self:end}.registry-date-controls{display:flex;align-items:end;justify-content:flex-end;gap:14px;flex-wrap:wrap}.registry-date-controls label{display:grid;gap:6px;font-size:12px;font-weight:700}.registry-date-controls .barangay-all-dates{display:flex;align-items:center;gap:8px;min-height:40px}.registry-date-controls .barangay-all-dates input{width:auto}@media(max-width:730px){.reports-top-controls.reports-controls,.reports-top-controls{grid-template-columns:minmax(0,1fr);gap:16px}.reports-top-controls>div:last-child{justify-self:stretch}.registry-date-controls{justify-content:flex-start}.reports-top-controls .reports-dates input{flex:1}}
+
+.reports-panel .registry-report-intro{margin-bottom:20px}.reports-panel .registry-report-intro h2{margin:0 0 6px}.reports-panel .registry-report-intro p{margin:0;line-height:1.5}

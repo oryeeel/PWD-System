@@ -90,7 +90,7 @@ export default function StaffDashboard() {
           <div className="staff-age-x-title">{chartGroup === 'age' ? 'Age Group (years)' : chartGroups[chartGroup]}</div>
         </div></div>
         {!records.length && <p className="staff-empty">No records to display.</p>}
-        <p className="staff-age-total">Total: {records.length.toLocaleString()} PWD records · All staff and admin records, excluding archived records</p>
+        <div className="staff-chart-footer"><p className="staff-age-total">Total: {records.length.toLocaleString()} PWD records</p><Link className="staff-announcement-link" to="/reports">View Reports <ArrowRight size={16}/></Link></div>
       </section>
       <section className="staff-panel staff-summary"><h2>Summary (This Month)</h2><div><FilePlus2 size={18}/><span>Records Added</span><strong>{addedThisMonth}</strong></div><div><FilePlus2 size={18}/><span>Records Updated</span><strong>{updatedThisMonth}</strong></div><div><FileBarChart2 size={18}/><span>Reports Generated</span><strong>{reportsThisMonth}</strong></div></section>
     </div>

@@ -19,7 +19,7 @@ export function recordCells(record,index) {
 export function exportBarangayExcel(groups,filterLabel) {
   const workbook = XLSX.utils.book_new()
   function addSheet(name, sections) {
-    const rows = [[office],['MSWDO | Villanueva, Misamis Oriental'],['Consolidated PWD List by Barangay'],[filterLabel],[]]
+    const rows = [[office],['MSWDO | Villanueva, Misamis Oriental'],['Detailed PWD Registry'],[filterLabel],[]]
     const merges = rows.slice(0,4).map((_,r) => ({s:{r,c:0},e:{r,c:8}}))
     for (const group of sections) {
       merges.push({s:{r:rows.length,c:0},e:{r:rows.length,c:8}})
@@ -50,11 +50,14 @@ export function exportBarangayPdf(groups,filterLabel) {
     pdf.text('Republic of the Philippines | Region X',148.5,12,{align:'center'})
     pdf.setFont('helvetica','bold');pdf.setFontSize(12);pdf.text(office,148.5,20,{align:'center'})
     pdf.setFont('helvetica','normal');pdf.setFontSize(9);pdf.text('MSWDO | Villanueva, Misamis Oriental',148.5,26,{align:'center'})
-    pdf.setFont('helvetica','bold');pdf.setFontSize(10);pdf.text('Consolidated PWD List by Barangay',148.5,32,{align:'center'})
-    pdf.setFont('helvetica','normal');pdf.setFontSize(8);pdf.text(filterLabel,12,37)
+    pdf.setFont('helvetica','bold');pdf.setFontSize(10);pdf.text('Detailed PWD Registry',148.5,32,{align:'center'})
+    pdf.setFont('helvetica','normal');pdf.setFontSize(8)
+    const filterLines=pdf.splitTextToSize(filterLabel,273)
+    pdf.text(filterLines,12,37)
+    const groupY=45+(filterLines.length-1)*3.6
     pdf.setFont('helvetica','bold');pdf.setFontSize(10)
-    pdf.text(`${group.name === 'Unassigned' ? '' : 'Barangay '}${group.name}${continued ? ' (continued)' : ''} — ${group.records.length} records`,12,45)
-    y=49
+    pdf.text(`${group.name === 'Unassigned' ? '' : 'Barangay '}${group.name}${continued ? ' (continued)' : ''} — ${group.records.length} records`,12,groupY)
+    y=groupY+4
     row(columns,true)
   }
   function row(cells,heading=false,index=0) {

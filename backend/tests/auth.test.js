@@ -67,3 +67,33 @@ test('login creates a server session, rejects bad passwords/origins, and logout 
   assert.equal((await request('/api/auth/logout',{method:'POST',headers})).status,200);
   assert.equal((await request('/api/records',{headers})).status,401);
 });
+
+test('admin edits preserve roles and passwords unless a new password is supplied',async t=>{
+  const admin={_id:'111111111111111111111111',username:'admin',fullname:'Admin',role:'Admin',status:'Active',passwordHash:await bcrypt.hash('test-password-only',4)};
+  const target={_id:'222222222222222222222222',username:'staff1',fullname:'Staff One',role:'Staff',status:'Active',passwordHash:'original-hash'};
+  const User={
+    findOne(){const result=Promise.resolve(admin);result.select=()=>Promise.resolve(admin);return result},
+    async findByIdAndUpdate(id,update){
+      if(update.$set.username==='taken'){const err=new Error('duplicate');err.code=11000;throw err}
+      if(id!==target._id)return null;
+      Object.assign(target,update.$set);return target;
+    },
+  };
+  const app=express();app.use(express.json());
+  const origin='http://office-test.invalid';
+  installAuth(app,{SESSION_SECRET:'a-test-secret-longer-than-thirty-two-characters',APP_ORIGIN:origin,NODE_ENV:'test'},{User,store:new session.MemoryStore()});
+  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+  t.after(()=>{server.closeAllConnections();return new Promise(resolve=>server.close(resolve))});
+  const base=`http://127.0.0.1:${server.address().port}`;
+  const login=await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify({username:'admin',password:'test-password-only',role:'Admin'})});
+  const cookie=login.headers.get('set-cookie').split(';')[0];
+  const edit=(body,id=target._id)=>fetch(base+'/api/users/'+id,{method:'PATCH',headers:{'Content-Type':'application/json',Origin:origin,Cookie:cookie},body:JSON.stringify(body)});
+  const response=await edit({username:'staff.updated',fullname:'Updated Staff',password:'',role:'Admin',status:'Archived'});
+  assert.equal(response.status,200);assert.ok(!(await response.json()).passwordHash);
+  assert.equal(target.passwordHash,'original-hash');assert.equal(target.role,'Staff');assert.equal(target.status,'Active');
+  assert.equal((await edit({username:'staff.updated',fullname:'Updated Staff',password:'short'})).status,400);
+  assert.equal((await edit({username:'taken',fullname:'Updated Staff'})).status,409);
+  assert.equal((await edit({username:'staff.updated',fullname:'Updated Staff'},'invalid')).status,400);
+  assert.equal((await edit({username:'staff.updated',fullname:'Updated Staff',password:'new-test-password'})).status,200);
+  assert.ok(await bcrypt.compare('new-test-password',target.passwordHash));
+});

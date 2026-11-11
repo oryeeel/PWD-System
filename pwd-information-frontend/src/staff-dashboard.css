@@ -25,6 +25,7 @@
 .staff-age-figure .staff-age-bars,.staff-age-figure .staff-age-labels{grid-template-columns:repeat(var(--age-groups,5),minmax(0,1fr))}
 .staff-age-figure .staff-age-bar{min-height:24px}
 .staff-age-figure .staff-age-column strong{bottom:auto;top:clamp(3px,calc(100% - var(--age-height) + 6px),calc(100% - 21px));z-index:2;color:#fff;background:#173126;border-radius:4px;padding:1px 4px;line-height:16px;pointer-events:none}
-.staff-age-total{margin:14px 0 0;font-size:11px;color:#607568}
+.staff-age-total{margin:0;font-size:11px;color:#607568}
+.staff-chart-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}.staff-chart-footer .staff-announcement-link{margin-top:0}
 
 .staff-chart-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.staff-chart-header h2{margin-bottom:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.staff-chart-header select{max-width:100%;padding:4px 28px 4px 0;border:0;border-radius:4px;background:transparent;color:inherit;font:inherit;cursor:pointer}.staff-chart-scroll{overflow-x:auto;padding-top:8px}.staff-age-labels span{overflow-wrap:anywhere}

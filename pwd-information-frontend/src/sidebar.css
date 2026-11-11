@@ -4,20 +4,20 @@
 }
 
 .app-shell .sidebar nav a {
-  background: #ffffffbd;
+  background: #b8e6c8;
   color: #244b36;
   font-weight: 600;
 }
 
 .app-shell .sidebar nav a:hover {
-  background: #d5f3e0;
+  background: #9ddbb3;
   color: #116b3a;
 }
 
 .app-shell .sidebar nav a.active {
-  background: #118647;
-  color: #fff;
-  box-shadow: inset 4px 0 #7bea9e;
+  background: #80cf9d;
+  color: #145c34;
+  box-shadow: inset 4px 0 #168647;
 }
 
 .app-shell .sidebar nav a:focus-visible {

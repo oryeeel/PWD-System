@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dns = require("node:dns");
+const {authenticatedCorsOptions} = require('./requestOrigin');
 
 require("dotenv").config();
 
@@ -9,14 +10,18 @@ require("dotenv").config();
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
 const PwdRecord = require("./models/PwdRecord");
+const {normalizePwdId} = require('./recordIds');
 const {purgeExpiredArchives, startArchiveCleanup} = require('./archiveRetention');
 const {createSmsHandler} = require('./sms');
 const ActivityLog = require('./models/ActivityLog');
-const {actorFrom,creatorFor,createActivityMiddleware,createActivityListHandler} = require('./activityLogs');
+const AuditChainState = require('./models/AuditChainState');
+const {initializeAuditChain,appendAuditEntry,verifyAuditChain} = require('./auditIntegrity');
+const {actorFrom,creatorFor,createActivityMiddleware,createActivityListHandler,createActivityIntegrityHandler} = require('./activityLogs');
 
 const specificDisabilities = new Set([
   'Physical Disability', 'Visual Disability', 'Hearing Disability',
-  'Intellectual Disability', 'Psychosocial Disability',
+  'Intellectual Disability', 'Mental Disability', 'Psychosocial Disability',
+  'Cancer (RA11215)', 'Rare Disease (RA10747)',
   'Speech and Language Disability', 'Learning Disability',
 ]);
 
@@ -42,12 +47,18 @@ function missingIdCardDetails(body) {
 const app = express();
 
 app.use(cors(process.env.NODE_ENV === 'production' || process.env.SERVER_AUTH === 'true'
-  ? {origin:process.env.APP_ORIGIN,credentials:true} : {}));
+  ? authenticatedCorsOptions(process.env) : {}));
 app.use(express.json({limit: '2mb'}));
 const serverAuth = process.env.NODE_ENV === 'production' || process.env.SERVER_AUTH === 'true';
-if (serverAuth) require('./auth').installAuth(app);
-app.use(createActivityMiddleware(ActivityLog));
-app.get('/api/activity-logs', createActivityListHandler(ActivityLog, PwdRecord));
+const writeActivityLog = serverAuth
+  ? (entry,session) => appendAuditEntry(ActivityLog,AuditChainState,process.env.AUDIT_LOG_HMAC_KEY,entry,session)
+  : entry => ActivityLog.create(entry);
+if (serverAuth) require('./auth').installAuth(app,process.env,{ActivityLog,writeActivityLog});
+app.use(createActivityMiddleware(ActivityLog,console,writeActivityLog));
+app.get('/api/activity-logs', createActivityListHandler(ActivityLog, PwdRecord, mongoose.models && mongoose.models.User));
+app.get('/api/activity-logs/integrity',createActivityIntegrityHandler(
+  () => verifyAuditChain(ActivityLog,AuditChainState,process.env.AUDIT_LOG_HMAC_KEY),
+));
 app.post('/api/activity-events', (req,res) => {
   if (actorFrom(req)?.role !== 'Staff') return res.status(403).json({message:'Staff session required.'});
   if (!['Signed in','Signed out','Viewed ID card'].includes(req.body?.action)) return res.status(400).json({message:'Unknown activity.'});
@@ -64,8 +75,11 @@ app.use('/api/records/:pwdId/document-photos',require('./routes/documentPhotos')
 const databaseReady = mongoose
   .connect(process.env.MONGODB_URI)
   .then(async () => {
-    if (serverAuth) await require('./auth').bootstrapAdmin();
-    if (!process.env.VERCEL) startArchiveCleanup(PwdRecord);
+    if (serverAuth) {
+      await require('./auth').bootstrapAdmin();
+      await initializeAuditChain(ActivityLog,AuditChainState,process.env.AUDIT_LOG_HMAC_KEY);
+    }
+    if (!process.env.VERCEL && process.env.DISABLE_ARCHIVE_CLEANUP !== 'true') startArchiveCleanup(PwdRecord);
     console.log("✅ MongoDB connected successfully!");
   })
   .catch((error) => {
@@ -73,7 +87,7 @@ const databaseReady = mongoose
       "❌ MongoDB connection error:",
       'Database initialization failed.'
     );
-    if (process.env.VERCEL) throw new Error('Database initialization failed.');
+    if (process.env.VERCEL || serverAuth) throw new Error('Database initialization failed.');
   });
 
 
@@ -101,39 +115,14 @@ app.get("/api/test", (req, res) => {
 // ============================================
 app.post("/api/records", async (req, res) => {
   try {
+    const pwdId = normalizePwdId(req.body?.pwdId);
+    if (!pwdId) return res.status(400).json({message:'Enter the official PWD ID as text (1-100 characters).'});
     const missing = missingIdCardDetails(req.body);
     if (missing.length) return res.status(400).json({message: `Required ID card details: ${missing.join(', ')}.`});
     const disabilities = recordDisabilities(req.body);
     if (req.body.disabilityType === 'Multiple Disabilities' && disabilities.length < 2) {
       return res.status(400).json({message: 'Select at least two specific disabilities.'});
     }
-    const latestRecord =
-      await PwdRecord.findOne().sort({
-        pwdId: -1,
-      });
-
-    let nextNumber = 1;
-
-    if (latestRecord?.pwdId) {
-      const currentNumber =
-        parseInt(
-          latestRecord.pwdId.replace(
-            "PWD-",
-            ""
-          )
-        );
-
-      if (!isNaN(currentNumber)) {
-        nextNumber =
-          currentNumber + 1;
-      }
-    }
-
-    const pwdId =
-      `PWD-${String(
-        nextNumber
-      ).padStart(4, "0")}`;
-
     const newRecord =
       new PwdRecord({
         ...req.body,
@@ -152,6 +141,7 @@ app.post("/api/records", async (req, res) => {
       .json(savedRecord);
 
   } catch (error) {
+    if (error.code === 11000) return res.status(409).json({message:'This PWD ID already exists. Check both current and archived records.'});
     console.error(
       "Error saving record:",
       error
@@ -197,16 +187,6 @@ app.get("/api/records", async (req, res) => {
 // 3. GET ONE PWD RECORD
 // ADD THIS
 // ============================================
-app.get('/api/records/next-id', async (req, res) => {
-  try {
-    const latest = await PwdRecord.findOne().sort({pwdId: -1});
-    const next = latest ? Number(latest.pwdId.replace('PWD-', '')) + 1 : 1;
-    res.json({pwdId: `PWD-${String(next).padStart(4, '0')}`});
-  } catch (error) {
-    res.status(500).json({message: 'Failed to generate PWD ID'});
-  }
-});
-
 app.get(
   "/api/records/:pwdId",
   async (req, res) => {
@@ -285,6 +265,9 @@ app.put(
   "/api/records/:pwdId",
   async (req, res) => {
     try {
+      if (req.body?.pwdId !== undefined && normalizePwdId(req.body.pwdId) !== req.params.pwdId) {
+        return res.status(400).json({message:'The PWD ID cannot be changed when editing an existing record.'});
+      }
       const missing = missingIdCardDetails(req.body);
       if (missing.length) return res.status(400).json({message: `Required ID card details: ${missing.join(', ')}.`});
       const disabilities = recordDisabilities(req.body);
@@ -358,11 +341,9 @@ app.put(
 // ============================================
 const PORT = process.env.PORT || 8081;
 
-if (!process.env.VERCEL) app.listen(PORT, () => {
-  console.log(
-    `🚀 Server running on http://localhost:${PORT}`
-  );
-});
+if (!process.env.VERCEL) databaseReady.then(() => app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+})).catch(() => {});
 
 async function recycleRecord(req, res) {
   try {

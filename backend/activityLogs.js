@@ -32,7 +32,7 @@ function creatorFor(req) {
   return actorFrom(req)?.username || 'Unknown';
 }
 
-function createActivityMiddleware(model, logger = console) {
+function createActivityMiddleware(model, logger = console, writeLog) {
   return (req, res, next) => {
     const actor = actorFrom(req);
     if (actor?.role !== 'Staff') return next();
@@ -45,7 +45,8 @@ function createActivityMiddleware(model, logger = console) {
       if (res.statusCode < 200 || res.statusCode >= 300) return;
       const event = actionFor(eventRequest, payload);
       if (!event) return;
-      const write = Promise.resolve().then(() => model.create({staffId:actor.id, username:actor.username,staffName:actor.fullname,...event}))
+      const log = {staffId:actor.id,username:actor.username,staffName:actor.fullname,actorRole:actor.role,...event};
+      const write = Promise.resolve().then(() => writeLog ? writeLog(log) : model.create(log))
         .catch(() => logger.error('Could not save staff activity log.'));
       req.activityWrites?.push(write);
     });
@@ -53,7 +54,7 @@ function createActivityMiddleware(model, logger = console) {
   };
 }
 
-function createActivityListHandler(model, recordModel) {
+function createActivityListHandler(model, recordModel, userModel) {
   return async (req,res) => {
     if (actorFrom(req)?.role !== 'Admin') return res.status(403).json({message:'Only admins can view activity logs.'});
     try {
@@ -62,6 +63,10 @@ function createActivityListHandler(model, recordModel) {
       const pageSize = [20,50,100].includes(requestedSize) ? requestedSize : 20;
       const query = String(req.query.search || '').trim().slice(0,100);
       const filter = {};
+      if (userModel) {
+        const actors = await userModel.find({role:{$in:['Admin','Staff']}}).select('_id').lean();
+        filter.staffId = {$in:actors.map(user=>String(user._id))};
+      }
       const username = String(req.query.staff || '').trim().slice(0,100);
       if (username) filter.username = username;
       const activity = String(req.query.activity || '').trim().slice(0,100);
@@ -89,4 +94,16 @@ function createActivityListHandler(model, recordModel) {
   };
 }
 
-module.exports = {actorFrom,creatorFor,actionFor,createActivityMiddleware,createActivityListHandler};
+function createActivityIntegrityHandler(verify) {
+  return async(req,res) => {
+    if (actorFrom(req)?.role !== 'Admin') return res.status(403).json({message:'Only admins can verify activity log integrity.'});
+    try {
+      const result = await verify();
+      res.json(result);
+    } catch {
+      res.status(500).json({message:'Could not verify activity log integrity.'});
+    }
+  };
+}
+
+module.exports = {actorFrom,creatorFor,actionFor,createActivityMiddleware,createActivityListHandler,createActivityIntegrityHandler};

@@ -1,6 +1,9 @@
+import {seedDefaultMessageDrafts} from './messageDrafts'
+
 const USERS_KEY = 'pwd_users_v1'
 const MESSAGES_KEY = 'pwd_messages_v1'
 const MESSAGE_EXAMPLES_KEY = 'pwd_message_examples_added_v1'
+const MESSAGE_DRAFT_TEMPLATES_KEY = 'pwd_message_draft_templates_v2'
 const SESSION_KEY = 'pwd_session_v1'
 // Keep login across refreshes in this tab, but never restore a persistent login.
 if (typeof localStorage !== 'undefined') localStorage.removeItem(SESSION_KEY)
@@ -36,10 +39,12 @@ export function saveUsers(users) { localStorage.setItem(USERS_KEY, JSON.stringif
 
 export function loadMessages() {
   if (import.meta.env.VITE_SERVER_AUTH === 'true') {
+    let saved
     try {
-      const saved=JSON.parse(localStorage.getItem(MESSAGES_KEY) || '[]')
-      return Array.isArray(saved) ? saved.filter(item => !item.sample && item.id !== 'althea-sms-demo') : []
-    } catch {return []}
+      saved=JSON.parse(localStorage.getItem(MESSAGES_KEY) || '[]')
+    } catch {saved=[]}
+    const messages=Array.isArray(saved) ? saved.filter(item => !item.sample && item.id !== 'althea-sms-demo') : []
+    return addDefaultMessageDrafts(messages)
   }
   let saved = []
   try { saved = JSON.parse(localStorage.getItem(MESSAGES_KEY) || '[]') } catch { saved = [] }
@@ -107,8 +112,18 @@ export function loadMessages() {
     localStorage.setItem(MESSAGES_KEY,JSON.stringify(saved))
     localStorage.setItem(scheduleKey,'1')
   }
-  return saved
+  return addDefaultMessageDrafts(saved)
 }
+
+function addDefaultMessageDrafts(messages) {
+  const result=seedDefaultMessageDrafts(messages,localStorage.getItem(MESSAGE_DRAFT_TEMPLATES_KEY)==='1')
+  if(result.seeded){
+    localStorage.setItem(MESSAGES_KEY,JSON.stringify(result.messages))
+    localStorage.setItem(MESSAGE_DRAFT_TEMPLATES_KEY,'1')
+  }
+  return result.messages
+}
+
 export function saveMessages(items) { localStorage.setItem(MESSAGES_KEY, JSON.stringify(items)) }
 
 export function setSession(user) { sessionStorage.setItem(SESSION_KEY,JSON.stringify(user)) }

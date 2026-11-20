@@ -141,7 +141,7 @@ export default function Dashboard() {
         <div className="panel-head"><h3>Recent Activity</h3><Link to="/records">View all records <ArrowRight size={14}/></Link></div>
         {activityError && <p role="status">{activityError}</p>}
         <div className="recent-table-scroll"><table className="recent-table"><thead><tr><th>ID</th><th>Full Name</th><th>Age</th><th>Gender</th><th>Disability Type</th><th>Barangay</th><th>Activity</th></tr></thead><tbody>
-          {recent.map(({record,event,key}) => <tr key={key}><td><Link to={record.deletedAt ? '/records?view=archived' : `/records/${record.pwdId}`}>{record.pwdId}</Link></td><td>{record.firstName} {record.lastName}</td><td>{record.age}</td><td>{record.gender}</td><td>{record.disabilityType}</td><td>{record.barangay}</td><td><span className="recent-activity">{event.label}</span></td></tr>)}
+          {recent.map(({record,event,key}) => <tr key={key}><td><Link to={record.deletedAt ? '/records?view=archived' : `/records/${encodeURIComponent(record.pwdId)}`}>{record.pwdId}</Link></td><td>{record.firstName} {record.lastName}</td><td>{record.age}</td><td>{record.gender}</td><td>{record.disabilityType}</td><td>{record.barangay}</td><td><span className="recent-activity">{event.label}</span></td></tr>)}
         </tbody></table>{!recent.length && <div className="empty">No recent activity.</div>}</div>
       </section>
     </div>

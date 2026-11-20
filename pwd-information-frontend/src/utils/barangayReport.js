@@ -1,20 +1,20 @@
 import {jsPDF} from 'jspdf'
 import * as XLSX from 'xlsx'
-import {barangays} from './barangays'
+import {barangays,normalizeBarangay} from './barangays.js'
 
 export const columns = ['No.', 'PWD ID', 'Last Name', 'First Name', 'Middle Name', 'Disability Type', 'Barangay', 'Date Added', 'Status']
 const office = 'PWD Registry and Information Management System'
 export function groupBarangayRecords(records) {
   const groups = barangays.map(name => ({name, records:[]}))
   const unassigned = {name:'Unassigned', records:[]}
-  for (const record of records) (groups.find(group => group.name === record.barangay) || unassigned).records.push(record)
+  for (const record of records) (groups.find(group => group.name === normalizeBarangay(record.barangay)) || unassigned).records.push(record)
   if (unassigned.records.length) groups.push(unassigned)
   for (const group of groups) group.records.sort((a,b) => `${a.lastName} ${a.firstName} ${a.pwdId}`.localeCompare(`${b.lastName} ${b.firstName} ${b.pwdId}`))
   return groups
 }
 export function recordCells(record,index) {
   const disability = record.disabilityType === 'Multiple Disabilities' && record.disabilities?.length ? `${record.disabilityType}: ${record.disabilities.join(', ')}` : record.disabilityType
-  return [index+1,record.pwdId,record.lastName,record.firstName,record.middleName,disability,record.barangay || 'Unassigned',String(record.createdAt || '').slice(0,10),record.status].map(value => value ?? '')
+  return [index+1,record.pwdId,record.lastName,record.firstName,record.middleName,disability,normalizeBarangay(record.barangay) || 'Unassigned',String(record.createdAt || '').slice(0,10),record.status].map(value => value ?? '')
 }
 export function exportBarangayExcel(groups,filterLabel) {
   const workbook = XLSX.utils.book_new()

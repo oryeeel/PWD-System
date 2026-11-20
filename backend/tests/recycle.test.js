@@ -34,12 +34,16 @@ test('recycle and restore preserve records, hide recycled records, and reserve I
       if(name==='cors') return () => () => {};
       if(name==='dotenv') return {config(){}};
       if(name==='node:dns') return {setServers(){}};
+      if(name==='./requestOrigin') return {authenticatedCorsOptions:()=>({})};
       if(name==='./models/PwdRecord') return model;
+      if(name==='./recordIds') return require('../recordIds');
       if(name==='./routes/documentPhotos') return () => {};
       if(name==='./archiveRetention') return {...require('../archiveRetention'), startArchiveCleanup(){}};
       if(name==='./sms') return {createSmsHandler: () => () => {}};
       if(name==='./models/ActivityLog') return {};
-      if(name==='./activityLogs') return {actorFrom:()=>null,createActivityMiddleware:()=>()=>{},createActivityListHandler:()=>()=>{}};
+      if(name==='./models/AuditChainState') return {};
+      if(name==='./auditIntegrity') return {initializeAuditChain:async()=>{},appendAuditEntry:async()=>{},verifyAuditChain:async()=>({valid:true})};
+      if(name==='./activityLogs') return {actorFrom:()=>null,createActivityMiddleware:()=>()=>{},createActivityListHandler:()=>()=>{},createActivityIntegrityHandler:()=>()=>{}};
       throw new Error(name);
     },process:{env:{}},console:{log(){},error(){}},Date,module:{exports:{}},
   });
@@ -60,8 +64,7 @@ test('recycle and restore preserve records, hide recycled records, and reserve I
   assert.equal((await call('post','/api/records/:pwdId/view')).code,404);
   assert.equal((await call('patch','/api/records/:pwdId/photo',{photo:'data:image/png;base64,AAAA'})).code,404);
   assert.equal((await call('post','/api/records/:pwdId/recycle')).code,404);
-  assert.equal((await call('get','/api/records/next-id')).data.pwdId,'PWD-0003');
-  assert.ok(routes.findIndex(r=>r.url==='/api/records/next-id') < routes.findIndex(r=>r.url==='/api/records/:pwdId'));
+  assert.ok(!routes.some(route=>route.url==='/api/records/next-id'));
   assert.equal((await call('post','/api/recycle-bin/:pwdId/restore')).code,200);
   assert.equal((await call('get','/api/recycle-bin')).data.length,0);
   assert.equal((await call('get','/api/records')).data.length,2);

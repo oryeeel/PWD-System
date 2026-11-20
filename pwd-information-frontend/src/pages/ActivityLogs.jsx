@@ -7,7 +7,7 @@ import {loadUsers} from '../utils/storage'
 import {oneMonthLater} from '../utils/oneMonthLater'
 import '../activity-logs.css'
 
-const activityOptions = ['Signed in','Signed out','Added record','Viewed record','Updated record','Archived record','Restored record','Updated profile photo','Updated document photo','Viewed ID card','Submitted SMS']
+const activityOptions = ['Signed in','Signed out','Added record','Viewed record','Updated record','Archived record','Restored record','Updated profile photo','Updated document photo','Viewed ID card','Submitted SMS','Reset staff password']
 
 export default function ActivityLogs() {
   const [data,setData] = useState({logs:[],total:0,page:1,pages:1})
@@ -29,6 +29,9 @@ export default function ActivityLogs() {
   const [version,setVersion] = useState(0)
   const [loading,setLoading] = useState(true)
   const [error,setError] = useState('')
+  const [integrityBusy,setIntegrityBusy] = useState(false)
+  const [integrityResult,setIntegrityResult] = useState(null)
+  const [integrityError,setIntegrityError] = useState('')
   const [loaded,setLoaded] = useState(false)
   const lastLoadedQuery = useRef('')
   const fetching = useRef(false)
@@ -62,9 +65,30 @@ export default function ActivityLogs() {
     setFilters(previous => ({...previous,[field]:value,...(field === 'from' ? {to:oneMonthLater(value)} : {})}))
     setPage(1)
   }
+
+  async function verifyIntegrity() {
+    if(integrityBusy)return
+    setIntegrityBusy(true);setIntegrityError('');setIntegrityResult(null)
+    try{
+      const response=await apiFetch('/api/activity-logs/integrity')
+      const result=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(result.message || 'Could not verify activity log integrity.')
+      setIntegrityResult(result)
+    }catch(failure){setIntegrityError(failure.message)}
+    finally{setIntegrityBusy(false)}
+  }
+
   return <div className="activity-logs-page">
-    <div className="page-title"><div><h1>Staff Activity Logs</h1><p>Review what staff did and when each action occurred.</p></div></div>
+    <div className="page-title"><div><h1>Activity Logs</h1><p>Review staff activity and administrator password resets.</p></div>
+      {serverAuthEnabled && <button type="button" className="secondary" disabled={integrityBusy} onClick={verifyIntegrity}>{integrityBusy?'Verifying...':'Verify log integrity'}</button>}
+    </div>
     <section className="panel">
+      {integrityError && <p className="error" role="alert">{integrityError}</p>}
+      {integrityResult && <p className={integrityResult.valid?'activity-note':'error'} role="status">
+        {integrityResult.valid
+          ? `Integrity verified: ${integrityResult.legacyEntries} baseline entries and ${integrityResult.chainedEntries} chained entries.`
+          : 'Integrity verification failed. Contact the system administrator.'}
+      </p>}
       <div className="activity-filters">
         <label>Staff<select value={filters.staff} onChange={event => filter('staff',event.target.value)}><option value="">All staff</option>{staffUsers.map(user => <option key={user.id} value={user.username}>{userDisplayName(user)} ({user.username})</option>)}</select></label>
         <label>Activity<select value={filters.activity} onChange={event => filter('activity',event.target.value)}><option value="">All activities</option>{activityOptions.map(action => <option key={action} value={action}>{action === 'Submitted SMS' ? 'Sent SMS' : action}</option>)}</select></label>
@@ -75,7 +99,7 @@ export default function ActivityLogs() {
       {error && <p className="error" role="alert">{error}</p>}
       {loading && !loaded && <p role="status">Loading activity logs...</p>}
       {loaded && <>
-        <div className="records-table-scroll"><table className="activity-table"><thead><tr><th>Date & Time</th><th>Staff</th><th>Activity</th></tr></thead><tbody>{data.logs.map(log => <tr key={log._id}><td>{new Date(log.createdAt).toLocaleString('en-PH',{timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'short'})}</td><td><strong>{userDisplayName(log)}</strong><small>{log.username}</small></td><td>{activityDescription(log)}</td></tr>)}</tbody></table></div>
+        <div className="records-table-scroll"><table className="activity-table"><thead><tr><th>Date & Time</th><th>User</th><th>Activity</th></tr></thead><tbody>{data.logs.map(log => <tr key={log._id}><td>{new Date(log.createdAt).toLocaleString('en-PH',{timeZone:'Asia/Manila',dateStyle:'medium',timeStyle:'short'})}</td><td><strong>{userDisplayName(log)}</strong><small>{log.username}</small></td><td>{activityDescription(log)}</td></tr>)}</tbody></table></div>
         {!data.logs.length && <p className="empty">{filters.staff || filters.activity || filters.from || filters.to ? 'No activity matches these filters.' : 'No staff activity logged yet. New staff actions will appear here.'}</p>}
         <div className="activity-pagination">
           <span aria-live="polite">{data.total ? `${((data.page-1)*(data.pageSize || 20)+1).toLocaleString()}–${Math.min(data.page*(data.pageSize || 20),data.total).toLocaleString()} of ${data.total.toLocaleString()} activities` : '0 activities'}</span>

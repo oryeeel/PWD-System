@@ -1,10 +1,11 @@
-import {barangays} from '../utils/barangays'
+import {barangays,normalizeBarangay} from '../utils/barangays'
 import React, {useEffect, useMemo, useRef, useState} from 'react'
 import {Eye, Pencil, Archive, Printer, Search, RotateCcw, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, UserRound, X, Upload} from 'lucide-react'
 import {Link, useSearchParams} from 'react-router-dom'
 import ArchivedRecords from '../components/ArchivedRecords'
 import {getSession} from '../utils/storage'
 import {archiveRecord, updateRecordPhoto, useRecords, notifyRecordsUpdated} from '../utils/recordsApi'
+import {comparePwdIds} from '../utils/pwdIdSort'
 
 
 const ageOptions = [
@@ -44,8 +45,8 @@ export default function Records() {
   const filtered = useMemo(() => records.filter(record => {
     const haystack = [record.pwdId,record.firstName,record.middleName,record.lastName,record.disabilityType,record.barangay].join(' ').toLowerCase()
     return haystack.includes(query.trim().toLowerCase()) && matchesAge(record.age,age) &&
-      (!type || record.disabilityType === type) && (!barangay || record.barangay === barangay)
-  }).sort((a,b) => String(a.pwdId).localeCompare(String(b.pwdId))), [records,query,age,type,barangay])
+      (!type || record.disabilityType === type) && (!barangay || normalizeBarangay(record.barangay) === barangay)
+  }).sort((a,b) => comparePwdIds(a.pwdId,b.pwdId)), [records,query,age,type,barangay])
 
   useEffect(() => {setPage(1);setJumpPage('')}, [query,age,type,barangay,pageSize])
   const totalPages = Math.max(1,Math.ceil(filtered.length / pageSize))
@@ -114,7 +115,7 @@ export default function Records() {
       <div className="records-table-scroll"><table className={`records-table records-table-balanced ${isStaff ? 'records-table-staff' : 'records-table-admin'}`}><colgroup><col className="records-col-number"/><col className="records-col-id"/><col className="records-col-name"/><col className="records-col-age"/><col className="records-col-gender"/><col className="records-col-disability"/><col className="records-col-barangay"/><col className="records-col-actions"/></colgroup><thead><tr><th scope="col">No.</th><th scope="col" className="records-id-number">ID Number</th><th scope="col" className="records-name-heading"><span>Full Name</span></th><th>Age</th><th>Gender</th><th>Disability Type</th><th>Barangay</th><th className="records-actions-heading">{getSession()?.role === 'Admin' ? 'Action' : 'Actions'}</th></tr></thead><tbody>
         {visible.map((record,index) => <tr key={record.pwdId}>
           <td>{start + index + 1}</td><td className="records-id-number">{record.pwdId}</td><td className="records-name-cell"><div className="record-name-with-photo"><span className="record-photo-picker"><button type="button" className="record-list-photo" title="View photo" aria-label={`View photo of ${record.firstName} ${record.lastName}`} onClick={() => {setPreviewRecord(record);setPhotoError('');photoDialog.current.showModal()}}>{record.photo ? <img src={record.photo} alt=""/> : <UserRound size={21} aria-hidden="true"/>}</button></span><span>{record.firstName} {record.middleName} {record.lastName}{photoSaving === record.pwdId && <small className="record-photo-saving">Saving photo...</small>}</span></div></td><td>{record.age}</td><td>{record.gender}</td><td>{record.disabilityType}{record.disabilityType === 'Multiple Disabilities' && <small className="record-specific-disabilities">{(record.disabilities || []).join(', ') || 'Details not recorded'}</small>}</td><td>{record.barangay}</td>
-          <td><div className="record-actions"><Link className="view" title="View record" aria-label={`View ${record.pwdId}`} to={`/records/${record.pwdId}`}><Eye size={17}/></Link>{isStaff && <><Link className="edit" title="Edit record" aria-label={`Edit ${record.pwdId}`} to={`/records/${record.pwdId}/edit`}><Pencil size={16}/></Link><Link className="card" title="Print ID" aria-label={`Print ID for ${record.pwdId}`} to={`/records/${record.pwdId}/id`}><Printer size={17}/></Link></>}{isStaff && <button className="archive" title="Archive record" aria-label={`Archive ${record.pwdId}`} onClick={() => archive(record.pwdId)}><Archive size={16}/></button>}</div></td>
+          <td><div className="record-actions"><Link className="view" title="View record" aria-label={`View ${record.pwdId}`} to={`/records/${encodeURIComponent(record.pwdId)}`}><Eye size={17}/></Link>{isStaff && <><Link className="edit" title="Edit record" aria-label={`Edit ${record.pwdId}`} to={`/records/${encodeURIComponent(record.pwdId)}/edit`}><Pencil size={16}/></Link><Link className="card" title="Print ID" aria-label={`Print ID for ${record.pwdId}`} to={`/records/${encodeURIComponent(record.pwdId)}/id`}><Printer size={17}/></Link></>}{isStaff && <button className="archive" title="Archive record" aria-label={`Archive ${record.pwdId}`} onClick={() => archive(record.pwdId)}><Archive size={16}/></button>}</div></td>
         </tr>)}
       </tbody></table>{!visible.length && <div className="empty">No records found.</div>}</div>
 

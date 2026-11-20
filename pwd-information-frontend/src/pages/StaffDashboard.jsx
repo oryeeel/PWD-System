@@ -5,6 +5,7 @@ import {Link} from 'react-router-dom'
 import {Accessibility, ArrowRight, CalendarDays, Download, FileBarChart2, FilePlus2, Mail, Megaphone, Search, UserRound, Users} from 'lucide-react'
 import {useRecords} from '../utils/recordsApi'
 import {countAgeGroups} from '../utils/ageGroups'
+import {normalizeBarangay} from '../utils/barangays'
 import '../staff-dashboard.css'
 
 const ageColors = ['#2563eb','#f97316','#16a34a','#9333ea','#e11d48','#64748b']
@@ -46,7 +47,8 @@ export default function StaffDashboard() {
     if (chartGroup === 'age') return countAgeGroups(records)
     const counts = new Map()
     for (const record of records) {
-      const label = String(record[chartGroup] || '').trim() || 'Unspecified'
+      const value = chartGroup === 'barangay' ? normalizeBarangay(record[chartGroup]) : String(record[chartGroup] || '').trim()
+      const label = value || 'Unspecified'
       counts.set(label,(counts.get(label) || 0) + 1)
     }
     return [...counts].sort(([a],[b]) => a.localeCompare(b)).map(([label,count]) => ({label,count}))
@@ -73,7 +75,7 @@ export default function StaffDashboard() {
       <StaffStat icon={<FilePlus2 size={29}/>} label="RECORDS ADDED THIS MONTH" value={addedThisMonth} detail={new Date().toLocaleDateString(undefined,{month:'long',year:'numeric'})}/>
     </div>
     <div className="staff-grid">
-      <section className="staff-panel staff-updates"><h2>Posted Updates</h2><p>Latest record activity.</p><div className="staff-update-grid">{updates.map(({record,kind,at}) => <Link to={`/records/${record.pwdId}`} className="staff-update" key={`${record.pwdId}-${kind}`}><span><FilePlus2 size={21}/></span><div><strong>{kind}</strong><small>{record.firstName} {record.lastName} · {record.pwdId}</small><p>{asDate(at)}</p><em>{kind.includes('updated') ? 'Update' : 'Record'}</em></div></Link>)}{!updates.length && <div className="staff-empty">No record updates yet.</div>}</div></section>
+      <section className="staff-panel staff-updates"><h2>Posted Updates</h2><p>Latest record activity.</p><div className="staff-update-grid">{updates.map(({record,kind,at}) => <Link to={`/records/${encodeURIComponent(record.pwdId)}`} className="staff-update" key={`${record.pwdId}-${kind}`}><span><FilePlus2 size={21}/></span><div><strong>{kind}</strong><small>{record.firstName} {record.lastName} · {record.pwdId}</small><p>{asDate(at)}</p><em>{kind.includes('updated') ? 'Update' : 'Record'}</em></div></Link>)}{!updates.length && <div className="staff-empty">No record updates yet.</div>}</div></section>
       <section className="staff-panel staff-announcements"><h2>Announcements</h2><div className="staff-announcement"><CalendarDays size={24}/><div><strong>Monthly Report Reminder</strong><p>Review this month&apos;s PWD records and generate the report when ready.</p><small>{new Date().toLocaleDateString(undefined,{month:'long',year:'numeric'})}</small></div></div><div className="staff-announcement"><Megaphone size={24}/><div><strong>Record Updates</strong><p>{updatedThisMonth} record{updatedThisMonth === 1 ? '' : 's'} updated this month.</p></div></div><Link className="staff-announcement-link" to="/reports">View Reports <ArrowRight size={16}/></Link></section>
       <section className="staff-panel staff-quick"><h2>Quick Actions</h2><Link to="/add"><FilePlus2 size={19}/> Add New PWD Record <ArrowRight size={16}/></Link><Link to="/records"><Search size={19}/> Search / View Records <ArrowRight size={16}/></Link><Link to="/reports"><FileBarChart2 size={19}/> Generate Reports <ArrowRight size={16}/></Link><button type="button" onClick={() => downloadDialog.current.showModal()} disabled={!records.length}><Download size={19}/> Download PWD List <ArrowRight size={16}/></button><Link to="/messages"><Mail size={19}/> Send a Message <ArrowRight size={16}/></Link></section>
       <section className="staff-panel staff-age"><div className="staff-chart-header"><h2>PWDs by <select aria-label="PWD chart grouping" value={chartGroup} onChange={event => setChartGroup(event.target.value)}>{Object.entries(chartGroups).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></h2></div>
@@ -90,7 +92,7 @@ export default function StaffDashboard() {
           <div className="staff-age-x-title">{chartGroup === 'age' ? 'Age Group (years)' : chartGroups[chartGroup]}</div>
         </div></div>
         {!records.length && <p className="staff-empty">No records to display.</p>}
-        <div className="staff-chart-footer"><p className="staff-age-total">Total: {records.length.toLocaleString()} PWD records</p><Link className="staff-announcement-link" to="/reports">View Reports <ArrowRight size={16}/></Link></div>
+        <div className="staff-chart-footer"><p className="staff-age-total">Total: {records.length.toLocaleString()} PWD records</p></div>
       </section>
       <section className="staff-panel staff-summary"><h2>Summary (This Month)</h2><div><FilePlus2 size={18}/><span>Records Added</span><strong>{addedThisMonth}</strong></div><div><FilePlus2 size={18}/><span>Records Updated</span><strong>{updatedThisMonth}</strong></div><div><FileBarChart2 size={18}/><span>Reports Generated</span><strong>{reportsThisMonth}</strong></div></section>
     </div>

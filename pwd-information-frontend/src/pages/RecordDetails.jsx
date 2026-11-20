@@ -2,13 +2,15 @@ import {userDisplayName} from '../utils/userDisplayName'
 import {apiFetch} from '../utils/apiFetch'
 import {getSession} from '../utils/storage'
 import RecordDocumentPhotos from '../components/RecordDocumentPhotos'
-import {barangays} from '../utils/barangays'
+import {barangays,normalizeBarangay} from '../utils/barangays'
 import React, {useEffect, useState} from 'react'
 import {Link, useParams} from 'react-router-dom'
 import {ArrowLeft, Download, Printer, Pencil, FileText, MapPin, ExternalLink, CreditCard, UserRound, X, ZoomIn, ZoomOut} from 'lucide-react'
 import {jsPDF} from 'jspdf'
 import {notifyRecordsUpdated, trackRecordView} from '../utils/recordsApi'
 import {disabilityTypes, specificDisabilities} from '../utils/disabilities'
+import {civilStatuses} from '../utils/civilStatuses'
+import {displayRecordAddress} from '../utils/recordAddress'
 
 const displayDate = value => {
   if (!value) return 'N/A'
@@ -21,7 +23,7 @@ function Field({label,value}) {
 }
 
 function PrintSheet({record,fullName}) {
-  return <div className="record-print-preview"><div className="print-sheet-title"><strong>PWD Registry and Information Management System</strong><small>MSWDO | Villanueva, Misamis Oriental</small><b>PWD RECORD</b></div><Field label="ID" value={record.pwdId}/><Field label="Full Name" value={fullName}/><Field label="Birthdate" value={displayDate(record.birthdate)}/><Field label="Age" value={record.age ?? 'N/A'}/><Field label="Gender" value={record.gender}/><Field label="Address" value={record.address || record.barangay}/><Field label="Disability Type" value={record.disabilityType}/>{record.disabilityType === 'Multiple Disabilities' && <Field label="Specific Disabilities" value={(record.disabilities || []).join(', ')}/>}<Field label="Contact Number" value={record.contact}/><Field label="Status" value={record.status}/><Field label="Date Added" value={displayDate(record.createdAt)}/><Field label="Added by" value={record.addedBy && userDisplayName({username:record.addedBy})}/></div>
+  return <div className="record-print-preview"><div className="print-sheet-title"><strong>PWD Registry and Information Management System</strong><small>MSWDO | Villanueva, Misamis Oriental</small><b>PWD RECORD</b></div><Field label="ID" value={record.pwdId}/><Field label="Full Name" value={fullName}/><Field label="Birthdate" value={displayDate(record.birthdate)}/><Field label="Age" value={record.age ?? 'N/A'}/><Field label="Gender" value={record.gender}/><Field label="Address" value={displayRecordAddress(record)}/><Field label="Disability Type" value={record.disabilityType}/>{record.disabilityType === 'Multiple Disabilities' && <Field label="Specific Disabilities" value={(record.disabilities || []).join(', ')}/>}<Field label="Contact Number" value={record.contact}/><Field label="Status" value={record.status}/><Field label="Date Added" value={displayDate(record.createdAt)}/><Field label="Added by" value={record.addedBy && userDisplayName({username:record.addedBy})}/></div>
 }
 
 function downloadPdf(record, fullName, paperSize, includePhoto) {
@@ -40,7 +42,7 @@ function downloadPdf(record, fullName, paperSize, includePhoto) {
   const rows = [
     ['Full Name',fullName], ['Birthdate',displayDate(record.birthdate)],
     ['Age',String(record.age ?? 'N/A')], ['Gender',record.gender],
-    ['Address',record.address || record.barangay], ['Disability Type',record.disabilityType],
+    ['Address',displayRecordAddress(record)], ['Disability Type',record.disabilityType],
     ...(record.disabilityType === 'Multiple Disabilities' ? [['Specific Disabilities',(record.disabilities || []).join(', ')]] : []),
     ['Contact Number',record.contact], ['Status',record.status],
     ['Date Added',displayDate(record.createdAt)], ['Added by',record.addedBy && userDisplayName({username:record.addedBy})],
@@ -94,7 +96,7 @@ export default function RecordDetails() {
     if (kind === 'edit') setForm({
       firstName: record.firstName || '', middleName: record.middleName || '', lastName: record.lastName || '',
       birthdate: record.birthdate || '', age: record.age ?? '', gender: record.gender || '',
-      barangay: record.barangay || '', address: record.address || '', disabilityType: record.disabilityType || '', disabilities: record.disabilities || [],
+      barangay: normalizeBarangay(record.barangay || ''), address: record.address || '', disabilityType: record.disabilityType || '', disabilities: record.disabilities || [],
       contact: record.contact || '', status: record.status || 'Active', civilStatus: record.civilStatus || '',
       bloodType: record.bloodType || '', emergencyContactName: record.emergencyContactName || '',
       emergencyContactPhone: record.emergencyContactPhone || '', photo: record.photo || '',
@@ -169,19 +171,19 @@ export default function RecordDetails() {
         <div className="record-portrait">{record.photo ? <img src={record.photo} alt={fullName}/> : <UserRound size={90}/>}</div>
         <strong>{record.pwdId}</strong><span className={record.status === 'Active' ? 'record-status active' : 'record-status'}>{record.status || 'N/A'}</span>
         <nav aria-label="Record sections"><button type="button" aria-pressed={section === 'personal'} onClick={() => setSection('personal')}><UserRound size={18}/> Personal Information</button><button type="button" aria-pressed={section === 'documents'} onClick={() => setSection('documents')}><FileText size={18}/> Documents</button></nav>
-        {isStaff && <Link className="secondary" to={`/records/${record.pwdId}/edit`}><Pencil size={16}/> Edit Record</Link>}
-        {isStaff && <Link className="secondary" to={`/records/${record.pwdId}/id`}><CreditCard size={16}/> View ID</Link>}
+        {isStaff && <Link className="secondary" to={`/records/${encodeURIComponent(record.pwdId)}/edit`}><Pencil size={16}/> Edit Record</Link>}
+        {isStaff && <Link className="secondary" to={`/records/${encodeURIComponent(record.pwdId)}/id`}><CreditCard size={16}/> View ID</Link>}
       </aside>
       <div className="record-workspace-content">
         <header className="record-name-heading"><h2>{fullName}</h2><p>PWD ID: {record.pwdId}</p></header>
         <section className="record-personal-section" hidden={section !== 'personal'} aria-label="Personal information"><h3>Personal Information</h3><div className="record-info-grid">
-          <Field label="Full Name" value={fullName}/><Field label="Birthdate" value={displayDate(record.birthdate)}/><Field label="Age" value={record.age ?? 'N/A'}/><Field label="Gender" value={record.gender}/><Field label="Address" value={record.address || record.barangay}/><Field label="Disability Type" value={record.disabilityType}/>
+          <Field label="Full Name" value={fullName}/><Field label="Birthdate" value={displayDate(record.birthdate)}/><Field label="Age" value={record.age ?? 'N/A'}/><Field label="Gender" value={record.gender}/><Field label="Address" value={displayRecordAddress(record)}/><Field label="Disability Type" value={record.disabilityType}/>
           {record.disabilityType === 'Multiple Disabilities' && <Field label="Specific Disabilities" value={(record.disabilities || []).join(', ')}/>}
           <Field label="Contact Number" value={record.contact}/><Field label="Civil Status" value={record.civilStatus}/><Field label="Blood Type" value={record.bloodType}/><Field label="Emergency Contact" value={record.emergencyContactName}/><Field label="Emergency Number" value={record.emergencyContactPhone}/><Field label="Date Added" value={displayDate(record.createdAt)}/><Field label="Added by" value={record.addedBy && userDisplayName({username:record.addedBy})}/>
         </div></section>
         <section className="record-docs-section" hidden={section !== 'documents'} aria-label="Record documents"><h3>Documents</h3><RecordDocumentPhotos key={record.pwdId} record={record} onPhotoUpdated={photo => setRecord(previous => ({...previous,photo}))}/></section>
       </div>
-      <aside className="record-location-panel"><h3><MapPin size={17}/> Location</h3><iframe title={`Area map: ${area}`} loading="lazy" referrerPolicy="no-referrer" src={`https://maps.google.com/maps?q=${encodeURIComponent(area)}&z=13&output=embed`}/><h4>Recorded Address</h4><p>{record.address || record.barangay || 'Not provided'}</p><small>Barangay / municipal area only. Exact home location is not recorded.</small><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(area)}`} target="_blank" rel="noreferrer">Open map <ExternalLink size={14}/></a></aside>
+      <aside className="record-location-panel"><h3><MapPin size={17}/> Location</h3><iframe title={`Area map: ${area}`} loading="lazy" referrerPolicy="no-referrer" src={`https://maps.google.com/maps?q=${encodeURIComponent(area)}&z=13&output=embed`}/><h4>Recorded Address</h4><p>{displayRecordAddress(record) || 'Not provided'}</p><small>Barangay / municipal area only. Exact home location is not recorded.</small><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(area)}`} target="_blank" rel="noreferrer">Open map <ExternalLink size={14}/></a></aside>
     </section>
     {modal && <div className="record-modal-backdrop" onMouseDown={() => setModal(null)}>
       <section className={`record-action-modal ${modal === 'edit' ? 'record-edit-modal' : ''} ${modal === 'print' ? 'record-print-modal' : ''}`} role="dialog" aria-modal="true" aria-label={{download:'Download PWD Record as PDF',print:'Print PWD Record',edit:'Edit Record'}[modal]} onMouseDown={event => event.stopPropagation()}>
@@ -202,7 +204,7 @@ export default function RecordDetails() {
             {form.disabilityType === 'Multiple Disabilities' && <fieldset className="record-modal-disabilities"><legend>Specific Disabilities (select at least two)</legend>{specificDisabilities.map(type => <label key={type}><input type="checkbox" checked={form.disabilities.includes(type)} onChange={() => setForm(previous => ({...previous,disabilities:previous.disabilities.includes(type) ? previous.disabilities.filter(item => item !== type) : [...previous.disabilities,type]}))}/>{type}</label>)}</fieldset>}
             <label>Contact Number<input value={form.contact} onChange={event => setForm({...form,contact:event.target.value})}/></label>
             <label>Status<select value={form.status} onChange={event => setForm({...form,status:event.target.value})}><option>Active</option><option>Inactive</option></select></label>
-            <label>Civil Status<select value={form.civilStatus} onChange={event => setForm({...form,civilStatus:event.target.value})}><option value="">Not provided</option><option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option></select></label>
+            <label>Civil Status<select value={form.civilStatus} onChange={event => setForm({...form,civilStatus:event.target.value})}><option value="">Not provided</option>{civilStatuses.map(value=><option key={value}>{value}</option>)}</select></label>
             <label>Blood Type<select value={form.bloodType} onChange={event => setForm({...form,bloodType:event.target.value})}><option value="">Not provided</option>{['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(type => <option key={type}>{type}</option>)}</select></label>
             <label>Emergency Contact Name<input value={form.emergencyContactName} onChange={event => setForm({...form,emergencyContactName:event.target.value})}/></label>
             <label>Emergency Contact Number<input type="tel" value={form.emergencyContactPhone} onChange={event => setForm({...form,emergencyContactPhone:event.target.value})}/></label>

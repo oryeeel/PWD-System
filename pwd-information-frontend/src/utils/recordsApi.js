@@ -17,7 +17,6 @@ async function request(url, options) {
 }
 
 export const getRecords = () => request(API)
-export const getNextPwdId = async () => (await request(`${API}/next-id`)).pwdId
 export const createRecord = record => request(API, {
   method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(record),
 })

@@ -3,6 +3,7 @@ import React, {useEffect, useState} from 'react'
 import {Link, useParams} from 'react-router-dom'
 import {ArrowLeft, Printer, UserRound, ArrowRightLeft} from 'lucide-react'
 import {createIdQr} from '../utils/idQr'
+import {displayRecordAddress} from '../utils/recordAddress'
 
 const dateText = value => {
   if (!value) return 'Not provided'
@@ -67,7 +68,7 @@ export default function IdCard() {
           <div className="photo-id-front-body">
             <span className="photo-id-hologram" aria-hidden="true"/>
             <div className="photo-id-picture">{record.photo ? <img src={record.photo} alt={`Photo of ${fullName}`}/> : <><UserRound size={70}/><small>Photo not provided</small></>}</div>
-            <div className="photo-id-information"><IdField label="Last Name, First Name, M.I." value={fullName} wide/><div className="photo-id-three"><IdField label="Sex" value={record.gender}/><IdField label="Civil Status" value={record.civilStatus}/><IdField label="Blood Type" value={record.bloodType}/></div><div className="photo-id-three"><IdField label="Date of Birth" value={dateText(record.birthdate)}/><IdField label="Date Issued" value={dateText(record.createdAt)}/><IdField label="Valid Until" value={dateText(validUntil(record.createdAt))}/></div><IdField label="Address" value={record.address || record.barangay} wide/><IdField label="Disability Type" value={disability} wide/><div className="photo-id-number">DIGITAL ID NO.: {record.pwdId}</div></div>
+            <div className="photo-id-information"><IdField label="Last Name, First Name, M.I." value={fullName} wide/><div className="photo-id-three"><IdField label="Sex" value={record.gender}/><IdField label="Civil Status" value={record.civilStatus}/><IdField label="Blood Type" value={record.bloodType}/></div><div className="photo-id-three"><IdField label="Date of Birth" value={dateText(record.birthdate)}/><IdField label="Date Issued" value={dateText(record.createdAt)}/><IdField label="Valid Until" value={dateText(validUntil(record.createdAt))}/></div><IdField label="Address" value={displayRecordAddress(record)} wide/><IdField label="Disability Type" value={disability} wide/><div className="photo-id-number">DIGITAL ID NO.: {record.pwdId}</div></div>
             <img className="photo-id-front-qr" src={qr} alt={`QR code containing ID ${record.pwdId}`}/>
           </div>
         </div>

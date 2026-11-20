@@ -1,5 +1,5 @@
 import {apiFetch} from '../utils/apiFetch'
-import {barangays} from '../utils/barangays'
+import {barangays,normalizeBarangay} from '../utils/barangays'
 import {buildRecordAddress,recordZone} from '../utils/recordAddress'
 import {validateRecordForm} from '../utils/validateRecordForm'
 import React, {
@@ -13,6 +13,7 @@ import {
   useParams,
 } from "react-router-dom";
 import {disabilityTypes, specificDisabilities} from '../utils/disabilities';
+import {civilStatuses} from '../utils/civilStatuses';
 
 export default function EditRecord() {
   const { id } = useParams();
@@ -63,7 +64,7 @@ export default function EditRecord() {
         );
 
         const response = await apiFetch(
-          `http://localhost:8081/api/records/${id}`
+          `http://localhost:8081/api/records/${encodeURIComponent(id)}`
         );
 
         const data =
@@ -101,7 +102,7 @@ export default function EditRecord() {
             data.age ?? "",
 
           barangay:
-            data.barangay || "",
+            normalizeBarangay(data.barangay || ""),
 
           contact:
             data.contact || "",
@@ -176,7 +177,7 @@ export default function EditRecord() {
       setSaving(true);
 
       const response = await apiFetch(
-        `http://localhost:8081/api/records/${id}`,
+        `http://localhost:8081/api/records/${encodeURIComponent(id)}`,
         {
           method: "PUT",
 
@@ -427,7 +428,7 @@ export default function EditRecord() {
                 </option>
               </select>
             </label>{form.disabilityType === 'Multiple Disabilities' && <fieldset className="edit-specific-disabilities"><legend>Specific Disabilities</legend>{specificDisabilities.map(type => <label key={type}><input type="checkbox" checked={form.disabilities.includes(type)} onChange={() => setForm(previous => ({...previous,disabilities:previous.disabilities.includes(type) ? previous.disabilities.filter(item => item !== type) : [...previous.disabilities,type]}))}/>{type}</label>)}</fieldset>}</div></section>
-<section className="edit-form-section" aria-labelledby="edit-section-3"><h2 id="edit-section-3">ID Card Details</h2><div className="edit-fields "><label>Civil Status <span>*</span><select name="civilStatus" value={form.civilStatus} onChange={change} required><option value="">Select civil status</option><option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option></select></label>
+<section className="edit-form-section" aria-labelledby="edit-section-3"><h2 id="edit-section-3">ID Card Details</h2><div className="edit-fields "><label>Civil Status <span>*</span><select name="civilStatus" value={form.civilStatus} onChange={change} required><option value="">Select civil status</option>{civilStatuses.map(value=><option key={value}>{value}</option>)}</select></label>
 <label>Blood Type <span>*</span><select name="bloodType" value={form.bloodType} onChange={change} required><option value="">Select blood type</option>{['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(type => <option key={type}>{type}</option>)}</select></label>
 <label>Emergency Contact Name <span>*</span><input name="emergencyContactName" value={form.emergencyContactName} onChange={change} required/></label>
 <label>Emergency Contact Number <span>*</span><input name="emergencyContactPhone" type="tel" value={form.emergencyContactPhone} onChange={change} required/></label></div></section>

@@ -7,6 +7,10 @@ const schema = new mongoose.Schema({
   action: {type: String, required: true},
   recordId: {type: String, default: ''},
   detail: {type: String, default: ''},
+  actorRole: {type:String,enum:['Admin','Staff']},
+  chainSequence:{type:Number,select:false},
+  previousHash:{type:String,select:false},
+  entryHash:{type:String,select:false},
   demoBatch: {type: String, select: false},
 }, {timestamps: {createdAt: true, updatedAt: false}});
 schema.index({createdAt: -1, _id: -1});

@@ -81,6 +81,39 @@
 .login-page .role-switch { margin-bottom: 24px; }
 .login-page .login-card .primary { min-height: 46px; }
 
+.login-recovery-action { display: flex; justify-content: flex-end; margin: 8px 0 18px; }
+.login-recovery-action .link-btn { padding: 6px 0; color: #066b3b; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.login-recovery-action .link-btn:focus-visible { outline: 2px solid #087f46; outline-offset: 4px; border-radius: 2px; }
+.login-recovery-action .link-btn:disabled { opacity: .6; cursor: wait; }
+.login-recovery form { display: grid; gap: 14px; }
+.login-recovery form > p { margin: 0 0 4px; color: #526b5c; font-size: 14px; line-height: 1.6; }
+.login-recovery form > small { margin-top: -9px; color: #62766a; font-size: 11px; line-height: 1.5; }
+.login-recovery form .primary { margin-top: 4px; }
+.login-recovery-actions { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.login-recovery-actions .link-btn { padding: 4px 0; color: #066b3b; font-size: 13px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.login-recovery-actions .link-btn:disabled { opacity: .6; cursor: wait; }
+.login-recovery .login-recovery-help { margin: 0; font-size: 12px; }
+.login-page .login-card .login-recovery-show,.temporary-password-page .login-card .temporary-password-show { display: flex; flex-direction: row; align-items: center; gap: 8px; margin: 0; font-size: 13px; }
+.login-page .login-card .login-recovery-show input,.temporary-password-page .login-card .temporary-password-show input { width: 16px; height: 16px; flex: 0 0 16px; min-height: 16px; margin: 0; padding: 0; }
+.login-recovery-back { margin-top: 20px; }
+.login-notice { padding: 16px; margin: 20px 0; border: 1px solid #cce4d5; border-radius: 9px; background: #f0f8f3; color: #24533b; font-size: 13px; }
+.temporary-password-page { display: flex; min-height: 100svh; align-items: center; justify-content: center; padding: 32px 20px; background: #f2f7f3; }
+.temporary-password-page .login-card { width: min(420px,100%); padding: 30px; border: 1px solid #dfeae2; border-radius: 12px; background: #fff; box-shadow: 0 12px 36px #193b2512; }
+.temporary-password-page h1 { margin: 0; color: #20372a; font-size: 26px; }
+.temporary-password-page p { color: #526b5c; font-size: 14px; line-height: 1.6; }
+.temporary-password-page form { display: grid; gap: 14px; }
+.temporary-password-page small { margin-top: -9px; color: #62766a; font-size: 11px; line-height: 1.5; }
+.temporary-password-page input:not([type="checkbox"]) { min-height: 46px; }
+
+/* Scale the welcome content to short laptop windows as well as their width. */
+@media (min-width:701px) and (max-height:760px) {
+  .login-page .welcome-panel { padding: clamp(16px,3svh,24px) clamp(24px,4vw,64px); }
+  .login-page .welcome-panel .big-seal { width: clamp(56px,12svh,76px); height: clamp(56px,12svh,76px); margin-bottom: 16px; }
+  .login-page .welcome-panel .login-system-title { font-size: clamp(22px,min(2.4vw,4.5svh),32px); margin-bottom: 12px; }
+  .login-page .login-disabilities { --hex-height: clamp(44px,10svh,64px); margin-top: 16px; }
+  .login-page .login-form-panel { padding-top: clamp(16px,3svh,24px); padding-bottom: clamp(16px,3svh,24px); }
+}
+
 @media (max-width:700px) {
   .login-page .login-overlay { grid-template-columns: minmax(0,1fr); }
   .login-page .welcome-panel { padding: 32px 24px; }

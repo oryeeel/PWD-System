@@ -4,6 +4,7 @@ import {apiFetch,serverAuthEnabled} from './utils/apiFetch'
 import { Routes,Route,Navigate,useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import Login from './pages/Login'
+import ChangeTemporaryPassword from './pages/ChangeTemporaryPassword'
 import Dashboard from './pages/Dashboard'
 import StaffDashboard from './pages/StaffDashboard'
 import Records from './pages/Records'
@@ -20,6 +21,7 @@ function Protected({children,role}){
  const location=useLocation()
  const session = getSession()
  if(!session) return <Navigate to="/login" state={{from:location}} replace/>
+ if(serverAuthEnabled && session.mustChangePassword && location.pathname !== '/change-password') return <Navigate to="/change-password" replace/>
  if(role && session.role !== role) return <Navigate to="/" replace/>
  return <Layout>{children}</Layout>
 }
@@ -47,6 +49,7 @@ export default function App(){
  if (sessionError) return <p role="alert">{sessionError}</p>
  return <Routes>
    <Route path="/login" element={<Login/>}/>
+   <Route path="/change-password" element={<ChangeTemporaryPassword/>}/>
    <Route path="/" element={<Protected><RoleDashboard/></Protected>}/>
    <Route path="/records" element={<Protected><Records/></Protected>}/>
    <Route path="/records/:id" element={<Protected><RecordDetails/></Protected>}/>

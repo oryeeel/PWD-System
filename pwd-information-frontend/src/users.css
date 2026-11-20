@@ -1,0 +1,28 @@
+.users-page .users-create-actions,.users-page .users-row-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.users-page .users-create-actions button{min-height:40px;white-space:nowrap}
+.users-page .users-guidance{margin:-5px 0 18px;font-size:13px;line-height:1.6;color:#526b5c}
+.users-page .users-demo-note{margin:0 0 18px;font-size:12px;line-height:1.5;color:#62766a}
+.users-page .users-success{margin:0 0 18px;font-size:13px;line-height:1.6}
+.users-page .users-email{min-width:155px;max-width:240px;overflow-wrap:anywhere}
+.users-page .users-no-email{color:#687b6e;font-style:italic}
+.users-page .users-row-actions{min-width:165px}
+.users-page .modal-backdrop{z-index:50}
+.users-page .users-dialog{width:min(520px,100%);max-height:calc(100dvh - 40px);overflow-y:auto;padding:22px;color:#25392c}
+.users-page .users-dialog>p{font-size:13px;line-height:1.6;color:#526b5c;margin:0 0 18px}
+.users-page .users-dialog .stack{gap:14px}
+.users-page .users-dialog .stack small{margin-top:-8px;font-size:11px;line-height:1.5;color:#62766a}
+.users-page .users-dialog .stack small.users-password-warning{padding:8px 10px;border-radius:6px;background:#fee9e9;color:#9a2424}
+.users-page .users-dialog .stack small.users-password-valid{color:#087a35}
+.users-page .users-dialog .stack input,.users-page .users-dialog .stack select{min-height:40px;font-size:13px;font-weight:400}
+.users-page .users-password-row{display:flex;align-items:center;gap:8px}
+.users-page .users-password-row input{flex:1;min-width:0}
+.users-page .users-password-row button{min-width:64px;min-height:40px}
+.users-page .users-dialog .stack .users-identity-confirmation{display:flex;flex-direction:row;align-items:center;gap:8px;margin:0;font-size:13px;line-height:1.5}
+.users-page .users-dialog .stack .users-identity-confirmation input{flex:0 0 16px;width:16px;height:16px;min-height:16px;margin:0;padding:0}
+.users-page .users-temporary-password{display:grid;gap:12px;padding:14px;border:1px solid #cce4d5;border-radius:9px;background:#f0f8f3;color:#24533b;font-size:13px}
+.users-page .users-temporary-password code{display:block;padding:12px;border:1px solid #d6e5da;border-radius:6px;background:#fff;color:#20372a;font-size:16px;overflow-wrap:anywhere;user-select:all}
+.users-page .users-temporary-password p{margin:0;color:#526b5c;line-height:1.5}
+.users-page .users-dialog .form-actions{padding-top:18px;border-top:1px solid #e5ede7}
+.users-page button:disabled{opacity:.55;cursor:not-allowed}
+.users-page :is(button,input,select):focus-visible{outline:2px solid #087f46;outline-offset:3px}
+@media(max-width:480px){.users-page .users-create-actions{width:100%}.users-page .users-create-actions button{flex:1}.users-page .modal-backdrop{padding:12px}.users-page .users-dialog{padding:18px;max-height:calc(100dvh - 24px)}.users-page .users-dialog .form-actions button{flex:1}}

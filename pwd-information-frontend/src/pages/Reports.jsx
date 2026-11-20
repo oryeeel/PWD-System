@@ -1,5 +1,5 @@
 import {oneMonthAfter} from '../utils/reportDates'
-import {barangays} from '../utils/barangays'
+import {barangays,normalizeBarangay} from '../utils/barangays'
 import React, {useEffect, useMemo, useState} from 'react'
 import {FileBarChart2, X, FileSpreadsheet, FileText} from 'lucide-react'
 import {useRecords} from '../utils/recordsApi'
@@ -13,14 +13,15 @@ const ageOptions = countAgeGroups([]).map(({label}) => label)
 function groupRecords(records,group) {
   if (group === 'age') return countAgeGroups(records).map(({label,count}) => [label,count])
   return Object.entries(records.reduce((counts,record) => {
-    const key = record[group] || 'Unspecified'
+    const value = group === 'barangay' ? normalizeBarangay(record[group]) : record[group]
+    const key = value || 'Unspecified'
     counts[key] = (counts[key] || 0) + 1
     return counts
   },{})).sort((a,b) => b[1] - a[1])
 }
 function dateLabel(value) {return new Date(`${value}T00:00:00`).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}
 function matchesCategory(record, disabilityType, barangay, age, gender) {
-  return (!disabilityType || record.disabilityType === disabilityType) && (!barangay || record.barangay === barangay) &&
+  return (!disabilityType || record.disabilityType === disabilityType) && (!barangay || normalizeBarangay(record.barangay) === barangay) &&
     (!gender || record.gender === gender) && (!age || countAgeGroups([record]).some(item => item.label === age && item.count > 0))
 }
 

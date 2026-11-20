@@ -5,8 +5,10 @@ export function apiFetch(url, options = {}) {
   const headers = new Headers(options.headers)
   const user = getSession()
   if (user && !serverAuthEnabled) headers.set('X-PWD-Actor', encodeURIComponent(JSON.stringify({id:user.id,username:user.username,fullname:user.fullname,role:user.role})))
-  const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/$/,'')
-  const requestUrl = url.replace(/^http:\/\/localhost:8081(?=\/api\/)/,apiBase)
+  const apiBase = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '').replace(/\/$/,'')
+  const requestUrl = url.startsWith('/api/') && apiBase
+    ? `${apiBase}${url}`
+    : url.replace(/^http:\/\/localhost:8081(?=\/api\/)/,apiBase)
   return fetch(requestUrl, {...options,headers,credentials:'include'}).then(response => {
     if (serverAuthEnabled && response.status === 401 && !requestUrl.includes('/api/auth/')) {
       clearSession()

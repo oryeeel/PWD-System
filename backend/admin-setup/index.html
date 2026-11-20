@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Set up the official administrator</title><link rel="stylesheet" href="/setup.css"><script src="/password-policy.js" defer></script><script src="/setup.js" defer></script></head>
+<body><main>
+  <p class="office">PWD Registry and Information Management System</p>
+  <h1>Set up your admin account</h1>
+  <p>Create the administrator who will manage staff accounts. Existing accounts and records will be preserved.</p>
+  <p id="status" role="status">Opening private setup…</p>
+  <form id="setup-form" hidden>
+    <label>Full name<input id="fullname" name="fullname" autocomplete="name" maxlength="150" required></label>
+    <label>Email address<input id="email" name="email" type="email" autocomplete="email" maxlength="254" required></label>
+    <label>Username<input id="username" name="username" autocomplete="username" maxlength="254" required></label>
+    <small>Your email address can also be your username.</small>
+    <label>Password<input id="password" name="password" type="password" autocomplete="new-password" aria-describedby="password-hint" required></label>
+    <small id="password-hint">Use 8-20 characters with at least one uppercase letter, one lowercase letter, one number, and one special character, such as !, @, or #.</small>
+    <label>Confirm password<input id="confirmation" name="confirmation" type="password" autocomplete="new-password" required></label>
+    <label class="show"><input id="show-password" type="checkbox"> Show passwords</label>
+    <p id="error" role="alert" hidden></p>
+    <button type="submit">Create Admin Account</button>
+  </form>
+  <a id="sign-in" hidden>Continue to Sign in</a>
+  <p class="note">This private form creates one admin account. Password recovery requires a configured email sender.</p>
+</main></body></html>

@@ -3,7 +3,7 @@ import {useRecords} from '../utils/recordsApi'
 import {columns,recordCells,groupBarangayRecords,exportBarangayExcel,exportBarangayPdf} from '../utils/barangayReport'
 import {downloadReport} from '../utils/reportExport'
 import {oneMonthAfter} from '../utils/reportDates'
-import {barangays} from '../utils/barangays'
+import {barangays,normalizeBarangay} from '../utils/barangays'
 import {countAgeGroups} from '../utils/ageGroups'
 
 const ageOptions=countAgeGroups([]).map(({label})=>label)
@@ -23,7 +23,7 @@ export default function BarangayReport({reportTypeControl,dateRange}) {
   const selected=useMemo(() => valid ? records.filter(record => {
     const date=String(record.createdAt || '').slice(0,10)
     return (allDates || (date>=start && date<=end)) && (!disability || record.disabilityType===disability) &&
-      (!barangay || record.barangay===barangay) && (!gender || record.gender===gender) &&
+      (!barangay || normalizeBarangay(record.barangay)===barangay) && (!gender || record.gender===gender) &&
       (!age || countAgeGroups([record]).some(item=>item.label===age && item.count>0))
   }) : [],[records,valid,allDates,start,end,disability,age,barangay,gender])
   const groups=useMemo(() => groupBarangayRecords(selected).filter(group=>!barangay || group.name===barangay),[selected,barangay])

@@ -1,7 +1,7 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {EventEmitter} = require('node:events');
-const {actorFrom,creatorFor,actionFor,createActivityMiddleware,createActivityListHandler} = require('../activityLogs');
+const {actorFrom,creatorFor,actionFor,createActivityMiddleware,createActivityListHandler,createActivityIntegrityHandler} = require('../activityLogs');
 const staff = {id:2,username:'staff1',fullname:'MSWDO Staff 1',role:'Staff'};
 const header = actor => ({'x-pwd-actor':encodeURIComponent(JSON.stringify(actor))});
 test('record creator uses the signed-in staff identity instead of a hardcoded body value',()=>{
@@ -19,7 +19,7 @@ test('records successful staff actions with actor and record ID, excluding reque
   createActivityMiddleware({create:async log=>saved.push(log)})(req,res,()=>{});
   res.json({pwdId:'PWD-0001'});res.emit('finish');
   await Promise.resolve();
-  assert.deepEqual(saved,[{staffId:'2',username:'staff1',staffName:'MSWDO Staff 1',action:'Updated record',recordId:'PWD-0001'}]);
+  assert.deepEqual(saved,[{staffId:'2',username:'staff1',staffName:'MSWDO Staff 1',actorRole:'Staff',action:'Updated record',recordId:'PWD-0001'}]);
 });
 test('does not record failed requests, admins, missing sessions or unrelated reads',async()=>{
   const saved=[];
@@ -60,7 +60,28 @@ test('activity filter combines exact action with staff and date filters',async()
   const res=response();
   await createActivityListHandler(model)({headers:header({...staff,role:'Admin'}),query:{activity:'Viewed record',staff:'staff2',from:'2026-10-24'}},res);
   assert.equal(res.statusCode,200);
-  assert.deepEqual(filter,{username:'staff2',action:'Viewed record',createdAt:{$gte:new Date('2026-10-24T00:00:00+08:00')}});
+  assert.deepEqual(filter,{action:'Viewed record',username:'staff2',createdAt:{$gte:new Date('2026-10-24T00:00:00+08:00')}});
+});
+
+test('activity logs can filter administrator password reset audit actions',async()=>{
+  let filter;
+  const chain={sort(){return this},skip(){return this},limit(){return this},lean:async()=>[]};
+  const model={countDocuments:async value=>{filter=value;return 0},find:value=>{assert.deepEqual(value,filter);return chain}};
+  const res=response();
+  await createActivityListHandler(model)({headers:header({...staff,role:'Admin'}),query:{activity:'Reset staff password'}},res);
+  assert.equal(res.statusCode,200);
+  assert.deepEqual(filter,{action:'Reset staff password'});
+});
+
+test('activity logs include current Admin and Staff actors, excluding deleted accounts',async()=>{
+  let filter;
+  const chain={sort(){return this},skip(){return this},limit(){return this},lean:async()=>[]};
+  const model={countDocuments:async value=>{filter=value;return 0},find:value=>{assert.deepEqual(value,filter);return chain}};
+  const userModel={find(value){assert.deepEqual(value,{role:{$in:['Admin','Staff']}});return {select(fields){assert.equal(fields,'_id');return {lean:async()=>[{_id:'current-admin-id'},{_id:'current-staff-id'}]}}}}};
+  const res=response();
+  await createActivityListHandler(model,null,userModel)({headers:header({...staff,role:'Admin'}),query:{}},res);
+  assert.equal(res.statusCode,200);
+  assert.deepEqual(filter,{staffId:{$in:['current-admin-id','current-staff-id']}});
 });
 
 test('maps archive, restore, creation, photos and SMS to clear actions',()=>{
@@ -73,6 +94,17 @@ test('staff cannot read activity logs and malformed actors are rejected',async()
   const res=response();
   await createActivityListHandler({})({headers:header(staff),query:{}},res);
   assert.equal(res.statusCode,403);
+});
+test('only admins can run activity log integrity verification',async()=>{
+  let verified=false;
+  const handler=createActivityIntegrityHandler(async()=>{verified=true;return {valid:true,legacyEntries:1,chainedEntries:0,latestSequence:0}});
+  const adminResponse=response();
+  await handler({headers:header({...staff,role:'Admin'})},adminResponse);
+  assert.equal(adminResponse.statusCode,200);assert.equal(adminResponse.data.valid,true);assert.equal(verified,true);
+  verified=false;
+  const staffResponse=response();
+  await handler({headers:header(staff)},staffResponse);
+  assert.equal(staffResponse.statusCode,403);assert.equal(verified,false);
 });
 test('admin search uses literal text, Philippine dates, newest-first pagination',async()=>{
   let filter;

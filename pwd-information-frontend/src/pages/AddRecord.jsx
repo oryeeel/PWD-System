@@ -1,14 +1,16 @@
 import {barangays} from '../utils/barangays'
 import {buildRecordAddress} from '../utils/recordAddress'
-import React, {useState} from 'react'
+import React, {useRef,useState} from 'react'
 import {useNavigate} from 'react-router-dom'
-import {Save, UserRound} from 'lucide-react'
+import {Camera, Save, UserRound} from 'lucide-react'
+import CameraCapture from '../components/CameraCapture'
 import {createRecord, notifyRecordsUpdated} from '../utils/recordsApi'
 import {disabilityTypes, specificDisabilities} from '../utils/disabilities'
+import {civilStatuses} from '../utils/civilStatuses'
 import {validateRecordForm} from '../utils/validateRecordForm'
 import {getSession} from '../utils/storage'
 
-const empty = {lastName:'',firstName:'',middleName:'',gender:'',birthdate:'',age:'',barangay:'',zone:'',disabilityType:'',disabilities:[],contact:'',civilStatus:'',bloodType:'',emergencyContactName:'',emergencyContactPhone:'',photo:''}
+const empty = {pwdId:'',lastName:'',firstName:'',middleName:'',gender:'',birthdate:'',age:'',barangay:'',zone:'',disabilityType:'',disabilities:[],contact:'',civilStatus:'',bloodType:'',emergencyContactName:'',emergencyContactPhone:'',photo:''}
 
 function ageFromDate(value) {
   if (!value) return ''
@@ -25,6 +27,12 @@ export default function AddRecord() {
   const [form,setForm] = useState(empty)
   const [saving,setSaving] = useState(false)
   const [message,setMessage] = useState('')
+  const [cameraOpen,setCameraOpen] = useState(false)
+  const photoInput = useRef(null)
+
+  function closeCamera() {
+    setCameraOpen(false)
+  }
 
   function update(name,value) {
     setForm(previous => ({...previous,[name]:value,...(name === 'birthdate' ? {age:ageFromDate(value)} : {}),...(name === 'disabilityType' && value !== 'Multiple Disabilities' ? {disabilities:[]} : {})}))
@@ -56,35 +64,87 @@ export default function AddRecord() {
     try {
       setSaving(true); setMessage('')
       const address = buildRecordAddress(form.zone,form.barangay)
-      const saved = await createRecord({...form,age:Number(form.age) || 0,address,status:'Active',addedBy:getSession()?.username || 'Unknown'})
+      const saved = await createRecord({...form,pwdId:form.pwdId.trim(),age:Number(form.age) || 0,address,status:'Active',addedBy:getSession()?.username || 'Unknown'})
       notifyRecordsUpdated()
-      navigate(`/records/${saved.pwdId}`)
+      navigate(`/records/${encodeURIComponent(saved.pwdId)}`)
     } catch (error) {setMessage(`Could not save record: ${error.message}`)}
     finally {setSaving(false)}
   }
 
   return <div className="add-record-page">
-    <h1>Add New Record</h1>
-    <section className="add-form-panel"><h2>Personal Information</h2>
-      {message && <div className="add-message">{message}</div>}
-      <form onSubmit={save} noValidate onInput={event => event.target.setCustomValidity?.('')}>
-        <div className="add-form-grid">
-          <label>Last Name <span>*</span><input placeholder="Enter Last Name" value={form.lastName} onChange={event => update('lastName',event.target.value)} required/></label>
-          <label>First Name <span>*</span><input placeholder="Enter First Name" value={form.firstName} onChange={event => update('firstName',event.target.value)} required/></label>
-          <label>Middle Name<input placeholder="Middle Name (Optional)" value={form.middleName} onChange={event => update('middleName',event.target.value)}/></label>
-          <div className="add-photo-field"><span className="add-photo-preview">{form.photo ? <img src={form.photo} alt="Selected PWD photo"/> : <UserRound size={30}/>}</span><label>Photo for record and ID card<input type="file" accept="image/*" onChange={choosePhoto}/><small>Optional image, up to 400 KB</small></label>{form.photo && <button type="button" onClick={() => update('photo','')}>Remove photo</button>}</div>
-          <fieldset className="add-gender"><legend>Gender <span>*</span></legend><label><input type="radio" name="gender" required value="Male" checked={form.gender === 'Male'} onChange={event => update('gender',event.target.value)}/> Male</label><label><input type="radio" name="gender" required value="Female" checked={form.gender === 'Female'} onChange={event => update('gender',event.target.value)}/> Female</label></fieldset>
-          <label>Birthdate <span>*</span><input type="date" value={form.birthdate} onChange={event => update('birthdate',event.target.value)} max={new Date().toISOString().slice(0,10)} required/></label>
-          <label>Age<input type="number" min="0" max="120" value={form.age} onChange={event => update('age',event.target.value)}/></label>
-          <div className="add-address-group"><span>Address</span><div><label>Barangay <span>*</span><select value={form.barangay} onChange={event => update('barangay',event.target.value)} required><option value="">Barangay</option>{barangays.map(value => <option key={value}>{value}</option>)}</select></label><label>Zone / Street <span>*</span><input placeholder="Zone or street" value={form.zone} onChange={event => update('zone',event.target.value)} required/></label></div></div>
-          <label>Disability Type <span>*</span><select value={form.disabilityType} onChange={event => update('disabilityType',event.target.value)} required><option value="">Select disability type</option>{disabilityTypes.map(value => <option key={value}>{value}</option>)}</select></label>
-          {form.disabilityType === 'Multiple Disabilities' && <fieldset className="add-specific-disabilities"><legend>Specific Disabilities <span>*</span></legend><p>Select at least two disabilities that apply.</p><div>{specificDisabilities.map(type => <label key={type}><input type="checkbox" name="specificDisabilities" checked={form.disabilities.includes(type)} onChange={() => toggleDisability(type)}/>{type}</label>)}</div></fieldset>}
-          <label>Contact Number <span>*</span><input type="tel" placeholder="Enter contact number" value={form.contact} onChange={event => update('contact',event.target.value)} required/></label>
-          <label>Status<div className="add-fixed-status" aria-label="Status: Active">Active</div></label>
-          <div className="add-id-extras"><h3>ID Card Details</h3><div><label>Civil Status <span>*</span><select value={form.civilStatus} onChange={event => update('civilStatus',event.target.value)} required><option value="">Select civil status</option><option>Single</option><option>Married</option><option>Widowed</option><option>Separated</option></select></label><label>Blood Type <span>*</span><select value={form.bloodType} onChange={event => update('bloodType',event.target.value)} required><option value="">Select blood type</option>{['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(type => <option key={type}>{type}</option>)}</select></label><label>Emergency Contact Name <span>*</span><input value={form.emergencyContactName} onChange={event => update('emergencyContactName',event.target.value)} required/></label><label>Emergency Contact Number <span>*</span><input type="tel" value={form.emergencyContactPhone} onChange={event => update('emergencyContactPhone',event.target.value)} required/></label></div></div>
+    <header className="add-page-heading">
+      <div><h1>Add New Record</h1><p>Register a person with disability using their official MSWD details.</p></div>
+      <small><span className="add-required" aria-hidden="true">*</span> Required fields</small>
+    </header>
+    <form className="add-form-panel" onSubmit={save} noValidate aria-busy={saving} onInput={event => event.target.setCustomValidity?.('')}>
+      {message && <div className="add-message" role="alert">{message}</div>}
+      <section className="add-form-section" aria-labelledby="add-registration-heading">
+        <header className="add-section-heading"><h2 id="add-registration-heading">Registration Details</h2><span className="add-status-badge">Status: Active</span></header>
+        <div className="add-registration-grid">
+          <label className="add-pwd-id" htmlFor="pwd-id">PWD ID Number <span className="add-required" aria-hidden="true">*</span>
+            <input id="pwd-id" name="pwdId" type="text" autoComplete="off" maxLength={100} placeholder="Enter the MSWD-issued PWD ID" value={form.pwdId} onChange={event => update('pwdId',event.target.value)} required/>
+          </label>
+          <div className="add-photo-field">
+            <span className="add-photo-preview">{form.photo ? <img src={form.photo} alt="Selected PWD photo"/> : <UserRound size={36} aria-hidden="true"/>}</span>
+            <div className="add-photo-controls">
+              <label htmlFor="profile-photo">Profile Photo <span className="add-optional">(optional)</span></label>
+              <input id="profile-photo" ref={photoInput} type="file" accept="image/*" onChange={choosePhoto} disabled={saving} aria-describedby="profile-photo-hint" hidden/>
+              <div className="add-photo-actions">
+                <button className="add-choose-photo" type="button" disabled={saving} onClick={() => photoInput.current?.click()}>Choose a Photo</button>
+                <button className="add-take-photo" type="button" disabled={saving} onClick={() => setCameraOpen(true)}><Camera size={15} aria-hidden="true"/> Take a Photo</button>
+              </div>
+              <small role="status">{form.photo ? 'Photo selected.' : 'No photo selected.'}</small>
+              <small id="profile-photo-hint">For the record and ID card. Maximum 400 KB.</small>
+              {form.photo && <button type="button" disabled={saving} onClick={() => {update('photo','');if (photoInput.current) photoInput.current.value = ''}}>Remove photo</button>}
+            </div>
+          </div>
         </div>
-        <div className="add-form-actions"><button type="button" onClick={() => navigate('/records')} disabled={saving}>Cancel</button><button type="submit" disabled={saving}><Save size={17}/>{saving ? 'Saving...' : 'Save Record'}</button></div>
-      </form>
-    </section>
+      </section>
+
+      <section className="add-form-section" aria-labelledby="add-personal-heading">
+        <header className="add-section-heading"><h2 id="add-personal-heading">Personal Information</h2></header>
+        <div className="add-form-grid">
+          <label>Last Name <span className="add-required" aria-hidden="true">*</span><input name="lastName" autoComplete="family-name" placeholder="Enter last name" value={form.lastName} onChange={event => update('lastName',event.target.value)} required/></label>
+          <label>First Name <span className="add-required" aria-hidden="true">*</span><input name="firstName" autoComplete="given-name" placeholder="Enter first name" value={form.firstName} onChange={event => update('firstName',event.target.value)} required/></label>
+          <label>Middle Name <span className="add-optional">(optional)</span><input name="middleName" autoComplete="additional-name" placeholder="Enter middle name" value={form.middleName} onChange={event => update('middleName',event.target.value)}/></label>
+          <label>Birthdate <span className="add-required" aria-hidden="true">*</span><input name="birthdate" type="date" value={form.birthdate} onChange={event => update('birthdate',event.target.value)} max={new Date().toISOString().slice(0,10)} required/></label>
+          <label>Age<input name="age" type="number" min="0" max="120" placeholder="Years" value={form.age} onChange={event => update('age',event.target.value)}/></label>
+          <fieldset className="add-gender"><legend>Gender <span className="add-required" aria-hidden="true">*</span></legend><label><input type="radio" name="gender" required value="Male" checked={form.gender === 'Male'} onChange={event => update('gender',event.target.value)}/> Male</label><label><input type="radio" name="gender" required value="Female" checked={form.gender === 'Female'} onChange={event => update('gender',event.target.value)}/> Female</label></fieldset>
+        </div>
+      </section>
+
+      <section className="add-form-section" aria-labelledby="add-address-heading">
+        <header className="add-section-heading"><h2 id="add-address-heading">Address and Contact</h2></header>
+        <div className="add-form-grid">
+          <label>Barangay <span className="add-required" aria-hidden="true">*</span><select name="barangay" value={form.barangay} onChange={event => update('barangay',event.target.value)} required><option value="">Select barangay</option>{barangays.map(value => <option key={value}>{value}</option>)}</select></label>
+          <label>Zone / Street <span className="add-required" aria-hidden="true">*</span><input name="zone" placeholder="Enter zone or street" value={form.zone} onChange={event => update('zone',event.target.value)} required/></label>
+          <label>Contact Number <span className="add-required" aria-hidden="true">*</span><input name="contact" type="tel" placeholder="09XXXXXXXXX" value={form.contact} onChange={event => update('contact',event.target.value)} required/></label>
+        </div>
+      </section>
+
+      <section className="add-form-section" aria-labelledby="add-disability-heading">
+        <header className="add-section-heading"><h2 id="add-disability-heading">Disability and ID Card Details</h2></header>
+        <div className="add-form-grid">
+          <label>Disability Type <span className="add-required" aria-hidden="true">*</span><select name="disabilityType" value={form.disabilityType} onChange={event => update('disabilityType',event.target.value)} required><option value="">Select disability type</option>{disabilityTypes.map(value => <option key={value}>{value}</option>)}</select></label>
+          <label>Civil Status <span className="add-required" aria-hidden="true">*</span><select name="civilStatus" value={form.civilStatus} onChange={event => update('civilStatus',event.target.value)} required><option value="">Select civil status</option>{civilStatuses.map(value=><option key={value}>{value}</option>)}</select></label>
+          <label>Blood Type <span className="add-required" aria-hidden="true">*</span><select name="bloodType" value={form.bloodType} onChange={event => update('bloodType',event.target.value)} required><option value="">Select blood type</option>{['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(type => <option key={type}>{type}</option>)}</select></label>
+        </div>
+        {form.disabilityType === 'Multiple Disabilities' && <fieldset className="add-specific-disabilities"><legend>Specific Disabilities <span className="add-required" aria-hidden="true">*</span></legend><p>Select at least two disabilities that apply.</p><div>{specificDisabilities.map(type => <label key={type}><input type="checkbox" name="specificDisabilities" checked={form.disabilities.includes(type)} onChange={() => toggleDisability(type)}/>{type}</label>)}</div></fieldset>}
+      </section>
+
+      <section className="add-form-section" aria-labelledby="add-emergency-heading">
+        <header className="add-section-heading"><h2 id="add-emergency-heading">Emergency Contact</h2></header>
+        <div className="add-form-grid add-grid-two">
+          <label>Emergency Contact Name <span className="add-required" aria-hidden="true">*</span><input name="emergencyContactName" placeholder="Enter full name" value={form.emergencyContactName} onChange={event => update('emergencyContactName',event.target.value)} required/></label>
+          <label>Emergency Contact Number <span className="add-required" aria-hidden="true">*</span><input name="emergencyContactPhone" type="tel" placeholder="09XXXXXXXXX" value={form.emergencyContactPhone} onChange={event => update('emergencyContactPhone',event.target.value)} required/></label>
+        </div>
+      </section>
+
+      <footer className="add-form-actions">
+        <p>Review the details before saving.</p>
+        <div className="add-action-buttons"><button className="secondary" type="button" onClick={() => navigate('/records')} disabled={saving}>Cancel</button><button className="primary" type="submit" disabled={saving}><Save size={17} aria-hidden="true"/>{saving ? 'Saving...' : 'Save Record'}</button></div>
+      </footer>
+    </form>
+    {cameraOpen && <CameraCapture onClose={closeCamera} onCapture={photo => {update('photo',photo);setMessage('');if (photoInput.current) photoInput.current.value = ''}}/>}
   </div>
 }

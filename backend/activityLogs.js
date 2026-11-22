@@ -23,7 +23,21 @@ function actionFor(req, payload) {
   if (req.method === 'PUT' && /^\/api\/records\/[^/]+$/.test(path)) return {action:'Updated record',recordId};
   if (req.method === 'PATCH' && /^\/api\/records\/[^/]+\/photo$/.test(path)) return {action:'Updated profile photo',recordId};
   if (req.method === 'PATCH' && /^\/api\/records\/[^/]+\/document-photos\//.test(path)) return {action:'Updated document photo',recordId,detail:path.endsWith('/proofOfDisability') ? 'Proof of disability' : 'PWD ID photo'};
-  if (req.method === 'POST' && path === '/api/messages/send') return {action:'Submitted SMS',recordId:req.body?.recipientIds?.[0] || '',detail:'Accepted by IPROG for delivery'};
+  if (req.method === 'POST' && path === '/api/messages/send') {
+    // Replaying a saved result is not a new submission. Never infer acceptance
+    // from HTTP 200: a completed batch may contain only failed/uncertain attempts.
+    if (payload?.replayed) return null;
+    const ids = [...new Set(req.body?.recipientIds || [])];
+    if (payload?.counts && Array.isArray(payload.results)) {
+      const {selected,unique,duplicates,submitted,failed,unknown,notSent} = payload.counts;
+      return {action:'Submitted SMS',recordId:ids.length === 1 ? ids[0] : '',
+        detail:`${selected} selected; ${unique} unique numbers; ${submitted} submitted to IPROG; ${failed} failed; ${unknown} unconfirmed; ${notSent} not sent; ${duplicates} duplicate numbers skipped. Delivery not confirmed. Recipients: ${ids.join(', ')}`};
+    }
+    if (payload?.status === 'Queued' && payload.providerMessageId) {
+      return {action:'Submitted SMS',recordId:ids[0] || '',detail:'Accepted by IPROG for delivery; delivery not confirmed.'};
+    }
+    return null;
+  }
   if (req.method === 'POST' && path === '/api/activity-events' && ['Signed in','Signed out','Viewed ID card'].includes(req.body?.action)) return {action:req.body.action,recordId:String(req.body.recordId || '').slice(0,100)};
   return null;
 }

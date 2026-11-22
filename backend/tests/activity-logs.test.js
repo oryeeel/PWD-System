@@ -86,8 +86,71 @@ test('activity logs include current Admin and Staff actors, excluding deleted ac
 
 test('maps archive, restore, creation, photos and SMS to clear actions',()=>{
   for(const [method,path,action] of [['POST','/api/records/PWD-0001/recycle','Archived record'],['POST','/api/recycle-bin/PWD-0001/restore','Restored record'],['POST','/api/records','Added record'],['PATCH','/api/records/PWD-0001/document-photos/pwdIdPhoto','Updated document photo'],['POST','/api/messages/send','Submitted SMS']]){
-    assert.equal(actionFor({method,path,body:{recipientIds:['PWD-0001']}},{pwdId:'PWD-0001'}).action,action);
+    assert.equal(actionFor({method,path,body:{recipientIds:['PWD-0001']}},{pwdId:'PWD-0001',status:'Queued',providerMessageId:'mock-id'}).action,action);
   }
+});
+test('SMS batch audit preserves per-outcome totals without claiming delivery or storing content',async()=>{
+  const saved=[];
+  const req={headers:header(staff),method:'POST',path:'/api/messages/send',
+    body:{recipientIds:['PWD-0001','PWD-0002','PWD-0003','PWD-0004'],message:'private announcement'},activityWrites:[]};
+  const res=response();
+  createActivityMiddleware({},console,async log=>saved.push(log))(req,res,()=>{});
+  res.json({status:'Partial',counts:{selected:4,unique:3,duplicates:1,submitted:1,failed:1,unknown:1,notSent:0},
+    results:[{phoneNumber:'639000000001',status:'Queued',providerMessageId:'mock-1'},
+      {phoneNumber:'639000000002',status:'Failed',message:'private provider error'},
+      {phoneNumber:'639000000003',status:'Unknown'}]});
+  res.emit('finish');
+  await Promise.all(req.activityWrites);
+  assert.equal(saved.length,1);
+  assert.equal(saved[0].action,'Submitted SMS');
+  assert.equal(saved[0].recordId,'');
+  assert.match(saved[0].detail,/1 submitted to IPROG; 1 failed; 1 unconfirmed; 0 not sent/);
+  assert.match(saved[0].detail,/1 duplicate numbers skipped/);
+  assert.match(saved[0].detail,/Delivery not confirmed/);
+  assert.match(saved[0].detail,/PWD-0001, PWD-0002, PWD-0003, PWD-0004/);
+  assert.ok(!JSON.stringify(saved).includes('private'));
+  assert.ok(!JSON.stringify(saved).includes('639000000001'));
+});
+test('failed SMS batches are audited honestly and replayed results do not create duplicate activity',async()=>{
+  const saved=[];
+  const payload={status:'Failed',counts:{selected:1,unique:1,duplicates:0,submitted:0,failed:1,unknown:0,notSent:0},results:[{status:'Failed'}]};
+  for (const replayed of [false,true]) {
+    const req={authUser:staff,method:'POST',path:'/api/messages/send',body:{recipientIds:['PWD-0001']},activityWrites:[]};
+    const res=response();
+    createActivityMiddleware({},console,async log=>saved.push(log))(req,res,()=>{});
+    res.json({...payload,replayed});res.emit('finish');
+    await Promise.all(req.activityWrites);
+  }
+  assert.equal(saved.length,1);
+  assert.equal(saved[0].recordId,'PWD-0001');
+  assert.match(saved[0].detail,/0 submitted to IPROG; 1 failed/);
+  assert.equal(actionFor({method:'POST',path:'/api/messages/send',body:{}},{}),null);
+});
+test('actual SMS handler deduplicates numbers and writes one audit entry across a replay',async()=>{
+  const {createSmsHandler} = require('../sms');
+  let providerCalls=0;
+  const logs=[];
+  const rows=[{pwdId:'PWD-QA-1',contact:'09000000001'},{pwdId:'PWD-QA-2',contact:'+63 900 000 0001'},
+    {pwdId:'PWD-QA-3',contact:'09000000002'}];
+  const handler=createSmsHandler({env:{IPROG_API_TOKEN:'fake-unit-token'},
+    model:{find:async()=>rows},send:async()=>{
+      providerCalls++;
+      return providerCalls === 1 ? {ok:true,status:200,json:async()=>({status:200,message_id:'mock-accepted'})}
+        : {ok:false,status:422,json:async()=>({status:422,message:'Rejected test template'})};
+    }});
+  for (let attempt=0;attempt<2;attempt++) {
+    const req={authUser:staff,method:'POST',path:'/api/messages/send',activityWrites:[],
+      body:{requestId:'audit-integration-test-request',recipientIds:rows.map(row=>row.pwdId),message:'Fixture notification'}};
+    const res=response();
+    createActivityMiddleware({},console,async entry=>logs.push(entry))(req,res,()=>{});
+    await handler(req,res);res.emit('finish');await Promise.all(req.activityWrites);
+    assert.equal(res.data.status,'Partial');
+    assert.equal(res.data.replayed,attempt === 1);
+  }
+  assert.equal(providerCalls,2);
+  assert.equal(logs.length,1);
+  assert.match(logs[0].detail,/3 selected; 2 unique numbers; 1 submitted to IPROG; 1 failed/);
+  assert.match(logs[0].detail,/1 duplicate numbers skipped/);
 });
 test('staff cannot read activity logs and malformed actors are rejected',async()=>{
   assert.equal(actorFrom({headers:{'x-pwd-actor':'bad-json'}}),null);

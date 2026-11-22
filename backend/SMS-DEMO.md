@@ -1,25 +1,93 @@
-# IPROG SMS demo
+# IPROG SMS notifications
 
-This integration sends a real SMS from the local backend to the contact number on one selected PWD record. It requires internet access, approved IPROG verification and available SMS credits. No Android gateway or paid web hosting is needed.
-
-1. Register at https://www.iprogsms.com/ and complete student verification. Check your dashboard for free credits and approved message requirements. Free credits and network support are controlled by IPROG.
-2. Obtain your API token from IPROG. Keep it private; do not put it in React code or send it in chat.
-3. Add these settings to the existing `backend/.env`, preserving `MONGODB_URI`:
-
-   ```dotenv
-   IPROG_API_TOKEN=your_private_token
-   ```
-
-   Use a Philippine mobile format such as `09XXXXXXXXX` or `639XXXXXXXXX`. Confirm your number's network is supported by your sender setup; Globe/TM and DITO are documented shared-sender options. Smart/TNT may need additional approval.
-4. Enter your real demo phone number as one demo record's contact number in the system. No SMS_DEMO_PHONE setting is required. Use fictional personal details for the demo record.
-5. From `backend`, run `node server.js`. From `pwd-information-frontend`, run `npm.cmd run dev`. Open the frontend on localhost and sign in as Staff.
-6. Open Send a Message, choose only the demo record, enter a short approved reminder, and click Send Now. This consumes real credits. Long messages and provider-added headers can consume more than one credit.
-7. An accepted submission appears in the Queued tab with a provider message ID saved in browser history. Queued is not proof of delivery. Confirm receipt on the phone and check the IPROG dashboard. Status is not automatically synchronized to this application.
-
-The backend allows only local requests and one selected recipient per send, and limits submissions to one per minute. It never retries automatically. If a request times out or fails ambiguously, check IPROG history before retrying; it may already have accepted the message. Drafts do not send SMS. Restarting the backend resets the cooldown.
-
-This is a local demonstration integration. The application's login is browser-based, so the local restriction and recipient limit are not a replacement for production server authentication. Keep the backend off public hosting until server authentication is implemented.
-
-Verification, dashboard signup and the first live send are manual steps. Automated tests mock the provider and do not use credits or deliver messages.
+The former one-recipient restriction was an application demo safeguard, not an
+IPROG requirement. IPROG documents both individual and bulk SMS endpoints. This
+application keeps the existing individual endpoint and submits one request per
+unique Philippine mobile number, for Announcement, Interview, Schedule, and
+Reminder messages.
 
 API reference: https://www.iprogsms.com/api/v1/documentation
+
+## Configuration
+
+Keep `IPROG_API_TOKEN` in the backend environment (locally, `backend/.env`; on
+hosting, the backend's secret environment settings). Never put it in a `VITE_`
+variable, browser code, API response, or committed configuration. The existing
+IPROG account still needs approval, supported routing, and sufficient credits.
+These changes do not alter the account or enable a different sender.
+
+Production uses the existing authenticated Staff session and origin controls.
+Unauthenticated development access remains restricted to loopback. Do not use
+the browser-only demonstration login for a public deployment.
+
+## Sending and safeguards
+
+- Select up to **20 beneficiaries** and enter a message of at most **480
+  characters**. Search and filtered checkbox selection remain available.
+- The selected list stays below Recipients, shows names and contacts, and has
+  individual remove buttons. Missing records and invalid mobile numbers block
+  submission. Validation never modifies beneficiary records.
+- The backend reloads the selected, non-archived records and normalizes `09…`,
+  `9…`, `639…`, and formatted `+63…` numbers. Beneficiaries sharing the same
+  normalized number receive only one SMS in that batch.
+- Send Now displays a confirmation with the message, selected beneficiary and
+  unique phone counts, and estimated SMS segments. GSM-7 extension characters
+  and Unicode use their respective segment limits. Provider-added text and
+  encoding can change the actual credit usage; the estimate is not a price quote.
+- The backend enforces a **60-second shared cooldown**, at most **three provider
+  requests at once**, an **eight-second timeout per provider request**, and a
+  **20-second sending budget**. Numbers not started within the budget are marked
+  Not sent. There are no automatic provider retries.
+- The browser saves the request identifier before submitting. Retrying an
+  unresolved submission uses that same identifier. The backend's saved result
+  is returned without contacting IPROG again. A pending submission is refused
+  rather than sent a second time. Never work around an uncertain result by
+  creating a new message before checking the IPROG dashboard.
+- In production, reservations and results use the existing `SmsCooldown`
+  collection alongside its cooldown document. This is SMS operational state;
+  beneficiary and unrelated collections are not migrated or rewritten. Request
+  identifiers are retained without automatic expiry so an old browser retry
+  cannot resend a previously submitted message. An interrupted reservation older
+  than 30 seconds can be recovered as Unconfirmed; recovery never resubmits it.
+
+## Results, drafts, and history
+
+**Queued / submitted** means IPROG returned an acceptance response and message
+identifier. It does **not** confirm delivery. **Failed** means a rejection was
+confirmed. **Unconfirmed** means acceptance could not be established, for
+example after a timeout. **Not sent** means that number was not submitted.
+Partial batches retain each number's result and the provider IDs that are known.
+This application does not automatically poll delivery receipts; check IPROG's
+dashboard to confirm the provider's delivery information.
+
+Draft templates, saved drafts, message filters, deletion, and restoration remain
+available. Editing a submitted message creates a draft copy. Saving or deleting
+a draft sends no SMS, and deleting history cannot cancel an already submitted
+message. Message history and drafts remain browser-local, as before. Activity
+logs use the existing audit pipeline, record batch outcome counts and selected
+record IDs, and do not claim that every request succeeded. Replayed results do
+not create a second submission log. Tokens, message content, and phone numbers
+are excluded from those activity entries.
+
+## Verification and release
+
+Automated tests inject a fake provider and fabricated phone numbers. They do
+not load `backend/.env`, connect to the production database, consume credits,
+or deliver SMS. From the repository root:
+
+```powershell
+node --test backend/tests/*.test.js
+node --test pwd-information-frontend/tests/*.test.* pwd-information-frontend/src/utils/reportDates.test.js
+```
+
+Build the frontend from `pwd-information-frontend` with `npm.cmd run build`.
+Deploy the frontend and backend changes together using the existing deployment
+process; no deployment is performed by this change. The hosting function must
+allow enough time for the 20-second sending budget plus database/audit writes.
+
+Before a manually authorized live acceptance check, use controlled test
+recipients in a test environment with consent and a small credit balance. Check
+one recipient, multiple recipients, shared numbers, canceling confirmation,
+invalid contacts, provider rejection, and uncertain responses. Confirm both the
+saved history and activity-log totals. Check actual handset receipt separately
+from provider acceptance. Never change real PWD records to perform these tests.

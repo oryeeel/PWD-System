@@ -65,7 +65,7 @@ app.post('/api/activity-events', (req,res) => {
   res.json({ok:true});
 });
 app.post('/api/messages/send', createSmsHandler({model: PwdRecord,
-  ...(process.env.VERCEL ? {acquireSendSlot:require('./smsCooldown').acquireSendSlot} : {})}));
+  getSubmissionStore:() => require('./smsCooldown').submissionStore}));
 app.use('/api/records/:pwdId/document-photos',require('./routes/documentPhotos'));
 
 

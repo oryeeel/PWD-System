@@ -91,7 +91,7 @@ export default function ActivityLogs() {
       </p>}
       <div className="activity-filters">
         <label>Staff<select value={filters.staff} onChange={event => filter('staff',event.target.value)}><option value="">All staff</option>{staffUsers.map(user => <option key={user.id} value={user.username}>{userDisplayName(user)} ({user.username})</option>)}</select></label>
-        <label>Activity<select value={filters.activity} onChange={event => filter('activity',event.target.value)}><option value="">All activities</option>{activityOptions.map(action => <option key={action} value={action}>{action === 'Submitted SMS' ? 'Sent SMS' : action}</option>)}</select></label>
+        <label>Activity<select value={filters.activity} onChange={event => filter('activity',event.target.value)}><option value="">All activities</option>{activityOptions.map(action => <option key={action} value={action}>{action === 'Submitted SMS' ? 'SMS submissions' : action}</option>)}</select></label>
         <label>From<input type="date" value={filters.from} onChange={event => filter('from',event.target.value)}/></label>
         <label>To<input type="date" value={filters.to} min={filters.from || undefined} onChange={event => filter('to',event.target.value)}/></label>
         <button type="button" className="secondary clear-filters-button" data-active={Boolean(filters.staff || filters.activity)} disabled={!Object.values(filters).some(Boolean)} onClick={() => {setFilters({staff:'',activity:'',from:'',to:''});setPage(1)}}>Clear Filters</button>

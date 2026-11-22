@@ -1,7 +1,7 @@
 import {apiFetch,recordStaffEvent,serverAuthEnabled} from '../utils/apiFetch'
 import React, {useEffect,useRef,useState} from 'react'
 import { useLocation,useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, EarOff, Brain, HeartHandshake, Speech, BrainCircuit, Ribbon, Dna, Accessibility } from 'lucide-react'
+import { Eye, EyeOff, EarOff, Brain, HeartPulse, HeartHandshake, Speech, BrainCircuit, Ribbon, Dna, Accessibility } from 'lucide-react'
 import { loadUsers, setSession } from '../utils/storage'
 import { disabilityTypes } from '../utils/disabilities'
 import { normalizeUsername } from '../utils/accountIdentity'
@@ -19,7 +19,7 @@ const disabilityIcons = {
   'Visual Disability': EyeOff,
   'Hearing Disability': EarOff,
   'Intellectual Disability': Brain,
-  'Mental Disability': Brain,
+  'Mental Disability': HeartPulse,
   'Psychosocial Disability': HeartHandshake,
   'Cancer (RA11215)': Ribbon,
   'Rare Disease (RA10747)': Dna,

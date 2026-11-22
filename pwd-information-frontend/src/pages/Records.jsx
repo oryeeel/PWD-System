@@ -32,6 +32,8 @@ export default function Records() {
   const [age,setAge] = useState('')
   const [type,setType] = useState('')
   const [barangay,setBarangay] = useState('')
+  const [gender,setGender] = useState('')
+  const [status,setStatus] = useState('')
   const [page,setPage] = useState(1)
   const [pageSize,setPageSize] = useState(50)
   const [jumpPage,setJumpPage] = useState('')
@@ -45,18 +47,19 @@ export default function Records() {
   const filtered = useMemo(() => records.filter(record => {
     const haystack = [record.pwdId,record.firstName,record.middleName,record.lastName,record.disabilityType,record.barangay].join(' ').toLowerCase()
     return haystack.includes(query.trim().toLowerCase()) && matchesAge(record.age,age) &&
-      (!type || record.disabilityType === type) && (!barangay || normalizeBarangay(record.barangay) === barangay)
-  }).sort((a,b) => comparePwdIds(a.pwdId,b.pwdId)), [records,query,age,type,barangay])
+      (!type || record.disabilityType === type) && (!barangay || normalizeBarangay(record.barangay) === barangay) &&
+      (!gender || record.gender === gender) && (!status || record.status === status)
+  }).sort((a,b) => comparePwdIds(a.pwdId,b.pwdId)), [records,query,age,type,barangay,gender,status])
 
-  useEffect(() => {setPage(1);setJumpPage('')}, [query,age,type,barangay,pageSize])
+  useEffect(() => {setPage(1);setJumpPage('')}, [query,age,type,barangay,gender,status,pageSize])
   const totalPages = Math.max(1,Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page,totalPages)
   const start = (currentPage - 1) * pageSize
   const visible = filtered.slice(start,start + pageSize)
-  const hasFilters = Boolean(query || age || type || barangay)
+  const hasFilters = Boolean(query || age || type || barangay || gender || status)
 
   function clearFilters() {
-    setSearchInput(''); setQuery(''); setAge(''); setType(''); setBarangay(''); setPage(1)
+    setSearchInput(''); setQuery(''); setAge(''); setType(''); setBarangay(''); setGender(''); setStatus(''); setPage(1)
   }
 
   async function archive(id) {
@@ -107,9 +110,11 @@ export default function Records() {
 
       <div className="records-filters">
         <label>Age<select value={age} onChange={event => setAge(event.target.value)}><option value="">All ages</option>{ageOptions.map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-        <label>Disability Type<select value={type} onChange={event => setType(event.target.value)}><option value="">All disability types</option>{types.map(value => <option key={value}>{value}</option>)}</select></label>
         <label>Barangay<select value={barangay} onChange={event => setBarangay(event.target.value)}><option value="">All barangays</option>{barangays.map(value => <option key={value}>{value}</option>)}</select></label>
-        <button type="button" className="records-clear clear-filters-button" data-active={Boolean(age || type || barangay)} disabled={!hasFilters && !searchInput} onClick={clearFilters}><RotateCcw size={15}/> Clear Filters</button>
+        <label>Disability Type<select value={type} onChange={event => setType(event.target.value)}><option value="">All disability types</option>{types.map(value => <option key={value}>{value}</option>)}</select></label>
+        <label>Gender<select value={gender} onChange={event => setGender(event.target.value)}><option value="">All genders</option><option value="Male">Male</option><option value="Female">Female</option></select></label>
+        <label>Status<select value={status} onChange={event => setStatus(event.target.value)}><option value="">All statuses</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select></label>
+        <button type="button" className="records-clear clear-filters-button" data-active={Boolean(age || type || barangay || gender || status)} disabled={!hasFilters && !searchInput} onClick={clearFilters}><RotateCcw size={15}/> Clear Filters</button>
       </div>
 
       <div className="records-table-scroll"><table className={`records-table records-table-balanced ${isStaff ? 'records-table-staff' : 'records-table-admin'}`}><colgroup><col className="records-col-number"/><col className="records-col-id"/><col className="records-col-name"/><col className="records-col-age"/><col className="records-col-gender"/><col className="records-col-disability"/><col className="records-col-barangay"/><col className="records-col-actions"/></colgroup><thead><tr><th scope="col">No.</th><th scope="col" className="records-id-number">ID Number</th><th scope="col" className="records-name-heading"><span>Full Name</span></th><th>Age</th><th>Gender</th><th>Disability Type</th><th>Barangay</th><th className="records-actions-heading">{getSession()?.role === 'Admin' ? 'Action' : 'Actions'}</th></tr></thead><tbody>

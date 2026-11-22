@@ -15,6 +15,7 @@ export default function BarangayReport({reportTypeControl,dateRange}) {
   const [age,setAge]=useState('')
   const [barangay,setBarangay]=useState('')
   const [gender,setGender]=useState('')
+  const [status,setStatus]=useState('')
   const [notice,setNotice]=useState('')
   const [pendingFormat,setPendingFormat]=useState(null)
   const exportDialog=useRef(null)
@@ -24,10 +25,10 @@ export default function BarangayReport({reportTypeControl,dateRange}) {
     const date=String(record.createdAt || '').slice(0,10)
     return (allDates || (date>=start && date<=end)) && (!disability || record.disabilityType===disability) &&
       (!barangay || normalizeBarangay(record.barangay)===barangay) && (!gender || record.gender===gender) &&
-      (!age || countAgeGroups([record]).some(item=>item.label===age && item.count>0))
-  }) : [],[records,valid,allDates,start,end,disability,age,barangay,gender])
+      (!age || countAgeGroups([record]).some(item=>item.label===age && item.count>0)) && (!status || record.status===status)
+  }) : [],[records,valid,allDates,start,end,disability,age,barangay,gender,status])
   const groups=useMemo(() => groupBarangayRecords(selected).filter(group=>!barangay || group.name===barangay),[selected,barangay])
-  const filterLabel=`${allDates ? 'All dates' : `${start} to ${end}`} | Age Group: ${age || 'All'} | Barangay: ${barangay || 'All'} | Disability Type: ${disability || 'All'} | Gender: ${gender || 'All'}`
+  const filterLabel=`${allDates ? 'All dates' : `${start} to ${end}`} | Age Group: ${age || 'All'} | Barangay: ${barangay || 'All'} | Disability Type: ${disability || 'All'} | Gender: ${gender || 'All'} | Status: ${status || 'All'}`
   function download(format) {
     if (!valid || error || !['xlsx','pdf'].includes(format)) return
     try {
@@ -62,7 +63,8 @@ export default function BarangayReport({reportTypeControl,dateRange}) {
       <label>Barangay<select value={barangay} onChange={event=>setBarangay(event.target.value)}><option value="">All barangays</option>{barangays.map(name=><option key={name} value={name}>{name}</option>)}</select></label>
       <label>Disability Type<select value={disability} onChange={event => setDisability(event.target.value)}><option value="">All disability types</option>{types.map(type => <option key={type}>{type}</option>)}</select></label>
       <label>Gender<select value={gender} onChange={event=>setGender(event.target.value)}><option value="">All genders</option><option>Male</option><option>Female</option></select></label>
-      <button type="button" className="clear-filters-button" data-active={Boolean(age || barangay || disability || gender)} disabled={!age && !barangay && !disability && !gender} onClick={()=>{setAge('');setBarangay('');setDisability('');setGender('')}}>Clear Filters</button>
+      <label>Status<select value={status} onChange={event=>setStatus(event.target.value)}><option value="">All statuses</option><option>Active</option><option>Inactive</option></select></label>
+      <button type="button" className="clear-filters-button" data-active={Boolean(age || barangay || disability || gender || status)} disabled={!age && !barangay && !disability && !gender && !status} onClick={()=>{setAge('');setBarangay('');setDisability('');setGender('');setStatus('')}}>Clear Filters</button>
     </div>
     {!valid && <div className="error">Choose a start date on or before the end date.</div>}
     <div className="barangay-report-actions"><strong>Total Records: {selected.length}</strong><button className="primary" disabled={!valid || Boolean(error)} onClick={() => requestExport('xlsx')}>Export Excel</button><button className="secondary" disabled={!valid || Boolean(error)} onClick={() => requestExport('pdf')}>Export PDF</button></div>

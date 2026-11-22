@@ -12,6 +12,7 @@ function reportDetails(options) {
     ['Gender',options.gender || 'All genders'],
     ['Barangay',options.barangay || 'All barangays'],
     ['Disability type',options.disabilityType || 'All disability types'],
+    ['Status',options.status || 'All statuses'],
   ]
 }
 function generatedAt() {
@@ -34,7 +35,7 @@ export function buildExcelReport(options) {
   const sheet=XLSX.utils.aoa_to_sheet(rows)
   sheet['!cols']=[{wch:8},{wch:58},{wch:18},{wch:18}]
   sheet['!merges']=[0,1,2,6,rows.length-1].map(r=>({s:{r,c:0},e:{r,c:3}}))
-  for(const r of [3,4,7,8,9,10,11]) sheet['!merges'].push({s:{r,c:1},e:{r,c:3}})
+  for(const r of [3,4,7,8,9,10,11,12]) sheet['!merges'].push({s:{r,c:1},e:{r,c:3}})
   if(!total || !data.length) sheet['!merges'].push({s:{r:headerRow+1,c:0},e:{r:headerRow+1,c:3}})
   else sheet['!autofilter']={ref:XLSX.utils.encode_range({s:{r:headerRow,c:0},e:{r:lastDataRow,c:3}})}
   for(let r=headerRow+1;r<=lastDataRow+1;r++) {

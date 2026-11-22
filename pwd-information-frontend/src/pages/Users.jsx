@@ -28,6 +28,10 @@ export default function Users() {
   const canEditPassword = !editing || form.role === 'Admin'
   const passwordFeedback = form.password ? passwordError(form.password) : ''
   const passwordValid = Boolean(form.password) && !passwordFeedback
+  const sortedUsers = [...users].sort((a,b) => {
+    const roleOrder = (a.role === 'Admin' ? 0 : 1) - (b.role === 'Admin' ? 0 : 1)
+    return roleOrder || a.username.localeCompare(b.username,undefined,{sensitivity:'base'})
+  })
 
   function startAdd() {
     setSuccess('');setShowPassword(false);setEditingId(null)
@@ -201,7 +205,7 @@ export default function Users() {
     <p className="users-guidance">Choose Admin or Staff when creating an account. Each account needs its own email address.</p>
     {!serverAuthEnabled && <p className="users-demo-note">Demo accounts are saved only in this browser.</p>}
     <div className="table-wrap"><table><thead><tr><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-      <tbody>{users.map(user => <tr key={user.id}>
+      <tbody>{sortedUsers.map(user => <tr key={user.id}>
         <td>{user.username}</td><td>{user.fullname}</td><td className="users-email">{user.email || <span className="users-no-email">Not added</span>}</td><td>{user.role}</td>
         <td><span className={`badge ${user.status === 'Active' ? 'ok' : 'muted'}`}>{user.status}</span></td>
         <td><div className="users-row-actions">

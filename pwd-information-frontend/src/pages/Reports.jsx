@@ -20,9 +20,10 @@ function groupRecords(records,group) {
   },{})).sort((a,b) => b[1] - a[1])
 }
 function dateLabel(value) {return new Date(`${value}T00:00:00`).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}
-function matchesCategory(record, disabilityType, barangay, age, gender) {
+function matchesCategory(record, disabilityType, barangay, age, gender, status) {
   return (!disabilityType || record.disabilityType === disabilityType) && (!barangay || normalizeBarangay(record.barangay) === barangay) &&
-    (!gender || record.gender === gender) && (!age || countAgeGroups([record]).some(item => item.label === age && item.count > 0))
+    (!gender || record.gender === gender) && (!age || countAgeGroups([record]).some(item => item.label === age && item.count > 0)) &&
+    (!status || record.status === status)
 }
 
 export default function Reports() {
@@ -45,8 +46,10 @@ function SummaryReports({group,reportTypeControl,dateRange}) {
   const [barangay,setBarangay] = useState('')
   const [age,setAge] = useState('')
   const [gender,setGender] = useState('')
+  const [status,setStatus] = useState('')
   const [reportAge,setReportAge] = useState('')
   const [reportGender,setReportGender] = useState('')
+  const [reportStatus,setReportStatus] = useState('')
   const [reportOpen,setReportOpen] = useState(false)
   const [reportGroup,setReportGroup] = useState(group)
   const [reportStart,setReportStart] = useState(defaultStart)
@@ -67,7 +70,7 @@ function SummaryReports({group,reportTypeControl,dateRange}) {
 
   function openReport() {
     setReportGroup(group)
-    setReportAge(age);setReportGender(gender)
+    setReportAge(age);setReportGender(gender);setReportStatus(status)
     setReportAllDates(allDates);setReportStart(start);setReportEnd(end);setReportDisabilityType(disabilityType);setReportBarangay(barangay);setExportError('');setExportSuccess('');setReportOpen(true)
   }
 
@@ -75,7 +78,7 @@ function SummaryReports({group,reportTypeControl,dateRange}) {
     if (!reportRangeValid || !['xlsx','pdf'].includes(format)) return
     try {
       setExportError('');setExportSuccess('')
-      const details = {allDates:reportAllDates,group:reportGroup,start:reportStart,end:reportEnd,disabilityType:reportDisabilityType,barangay:reportBarangay,age:reportAge,gender:reportGender,data:reportData,total:reportRecords.length}
+      const details = {allDates:reportAllDates,group:reportGroup,start:reportStart,end:reportEnd,disabilityType:reportDisabilityType,barangay:reportBarangay,age:reportAge,gender:reportGender,status:reportStatus,data:reportData,total:reportRecords.length}
       const blob = format === 'xlsx' ? buildExcelReport(details) : buildPdfReport(details)
       if (!blob.size) throw new Error('The generated file is empty.')
       downloadReport(blob,`PWD_Report_${reportGroup}_${reportAllDates ? 'All_Dates' : `${reportStart}_to_${reportEnd}`}.${format}`)
@@ -91,14 +94,14 @@ function SummaryReports({group,reportTypeControl,dateRange}) {
     (new Date(`${reportEnd}T00:00:00Z`) - new Date(`${reportStart}T00:00:00Z`)) <= 366 * 86400000)
   const reportRecords = useMemo(() => reportRangeValid ? records.filter(record => {
     const date = String(record.createdAt || '').slice(0,10)
-    return (reportAllDates || (date >= reportStart && date <= reportEnd)) && matchesCategory(record,reportDisabilityType,reportBarangay,reportAge,reportGender)
-  }) : [],[records,reportStart,reportEnd,reportAllDates,reportRangeValid,reportDisabilityType,reportBarangay,reportAge,reportGender])
+    return (reportAllDates || (date >= reportStart && date <= reportEnd)) && matchesCategory(record,reportDisabilityType,reportBarangay,reportAge,reportGender,reportStatus)
+  }) : [],[records,reportStart,reportEnd,reportAllDates,reportRangeValid,reportDisabilityType,reportBarangay,reportAge,reportGender,reportStatus])
   const reportData = useMemo(() => groupRecords(reportRecords,reportGroup),[reportRecords,reportGroup])
 
   const selected = useMemo(() => validRange ? records.filter(record => {
     const date = String(record.createdAt || '').slice(0,10)
-    return (allDates || (date >= start && date <= end)) && matchesCategory(record,disabilityType,barangay,age,gender)
-  }) : [],[records,start,end,allDates,validRange,disabilityType,barangay,age,gender])
+    return (allDates || (date >= start && date <= end)) && matchesCategory(record,disabilityType,barangay,age,gender,status)
+  }) : [],[records,start,end,allDates,validRange,disabilityType,barangay,age,gender,status])
   const data = useMemo(() => groupRecords(selected,group),[selected,group])
   const max = Math.max(1,...data.map(([,count]) => count))
   const tickStep = 25
@@ -113,7 +116,7 @@ function SummaryReports({group,reportTypeControl,dateRange}) {
         {reportTypeControl}
         <div><label style={{display:'flex',alignItems:'center',gap:8,marginBottom:10}}><input type="checkbox" checked={allDates} onChange={event => setAllDates(event.target.checked)}/> All dates</label><strong>Date Range</strong><div className="reports-dates"><input disabled={allDates} aria-label="Start date" type="date" value={start} onChange={event => {setStart(event.target.value);setEnd(oneMonthAfter(event.target.value))}}/><span>➜</span><input disabled={allDates} aria-label="End date" type="date" value={end} min={start || undefined} onChange={event => setEnd(event.target.value)}/></div></div>
       </div>
-      <div className="reports-category-filters"><label>Age Group<select value={age} onChange={event => setAge(event.target.value)}><option value="">All age groups</option>{ageOptions.map(label => <option key={label} value={label}>{label}</option>)}<option value="Unspecified">Unspecified</option></select></label><label>Barangay<select value={barangay} onChange={event => setBarangay(event.target.value)}><option value="">All barangays</option>{barangays.map(name => <option key={name} value={name}>{name}</option>)}</select></label><label>Disability Type<select value={disabilityType} onChange={event => setDisabilityType(event.target.value)}><option value="">All disability types</option>{disabilityTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></label><label>Gender<select value={gender} onChange={event => setGender(event.target.value)}><option value="">All genders</option><option>Male</option><option>Female</option></select></label><button type="button" className="clear-filters-button" data-active={Boolean(disabilityType || barangay || age || gender)} onClick={() => {setDisabilityType('');setBarangay('');setAge('');setGender('')}} disabled={!disabilityType && !barangay && !age && !gender}>Clear Filters</button></div>
+      <div className="reports-category-filters"><label>Age Group<select value={age} onChange={event => setAge(event.target.value)}><option value="">All age groups</option>{ageOptions.map(label => <option key={label} value={label}>{label}</option>)}<option value="Unspecified">Unspecified</option></select></label><label>Barangay<select value={barangay} onChange={event => setBarangay(event.target.value)}><option value="">All barangays</option>{barangays.map(name => <option key={name} value={name}>{name}</option>)}</select></label><label>Disability Type<select value={disabilityType} onChange={event => setDisabilityType(event.target.value)}><option value="">All disability types</option>{disabilityTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></label><label>Gender<select value={gender} onChange={event => setGender(event.target.value)}><option value="">All genders</option><option>Male</option><option>Female</option></select></label><label>Status<select value={status} onChange={event => setStatus(event.target.value)}><option value="">All statuses</option><option>Active</option><option>Inactive</option></select></label><button type="button" className="clear-filters-button" data-active={Boolean(disabilityType || barangay || age || gender || status)} onClick={() => {setDisabilityType('');setBarangay('');setAge('');setGender('');setStatus('')}} disabled={!disabilityType && !barangay && !age && !gender && !status}>Clear Filters</button></div>
       {!validRange && <div className="error">Choose a start date on or before the end date.</div>}
       <h2>PWD by {groupNames[group]} <small>({allDates ? 'All dates' : validRange ? `${dateLabel(start)} - ${dateLabel(end)}` : 'Select dates'})</small></h2>
       <div className="chart-with-axes reports-labeled-chart">
@@ -143,7 +146,7 @@ function SummaryReports({group,reportTypeControl,dateRange}) {
           <strong>PWD by {groupNames[reportGroup]}</strong>
           <span>{reportAllDates ? 'All dates' : reportRangeValid ? `${dateLabel(reportStart)} - ${dateLabel(reportEnd)}` : 'Choose a valid date range within one year on the Reports page.'}</span>
           <p className="report-preview-filters">Disability Type: {reportDisabilityType || 'All'} &middot; Barangay: {reportBarangay || 'All'}</p>
-          <p className="report-preview-filters">Age Group: {reportAge || 'All'} &middot; Gender: {reportGender || 'All'}</p>
+          <p className="report-preview-filters">Age Group: {reportAge || 'All'} &middot; Gender: {reportGender || 'All'} &middot; Status: {reportStatus || 'All'}</p>
           <div className="report-preview-list">{reportData.map(([label,count]) => <div key={label}><span>{label}</span><b>{count}</b></div>)}{!reportData.length && <p>No records match the selected dates and filters.</p>}</div>
           <div className="report-preview-total"><strong>Total Records</strong><b>{reportRecords.length.toLocaleString()}</b></div>
           <div className="report-direct-exports">

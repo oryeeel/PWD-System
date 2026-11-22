@@ -86,7 +86,7 @@ export default function ActivityLogs() {
       {integrityError && <p className="error" role="alert">{integrityError}</p>}
       {integrityResult && <p className={integrityResult.valid?'activity-note':'error'} role="status">
         {integrityResult.valid
-          ? `Integrity verified: ${integrityResult.legacyEntries} baseline entries and ${integrityResult.chainedEntries} chained entries.`
+          ? `Activity log integrity verified: ${integrityResult.legacyEntries.toLocaleString()} pre-existing entries and ${integrityResult.chainedEntries.toLocaleString()} chained entries.`
           : 'Integrity verification failed. Contact the system administrator.'}
       </p>}
       <div className="activity-filters">
